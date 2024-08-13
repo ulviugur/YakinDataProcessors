@@ -1,0 +1,147 @@
+package com.langpack.scraper;
+
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Locale;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.langpack.common.BasicClass;
+import com.langpack.common.ConfigReader;
+import com.langpack.common.FileLedger;
+import com.langpack.common.GlobalUtils;
+import com.langpack.integration.LedgerManager;
+import com.langpack.structure.WordGenerator;
+
+public class ChromeWorker extends BasicClass implements Runnable {
+	public static final Logger log4j = LogManager.getLogger("ChromeWorker");
+	ChromeHeadless chrome = null;
+	WordGenerator gen = null;
+	String name = null;
+	String ledgerManageConfigFileName = null;
+	String fileLedgerRootName = null;
+	ArrayList<String> keyList = null;
+	LedgerManager ledgerManager = null;
+	FileLedger fileLedger = null;
+	
+	public ChromeWorker(String cfgFileName) {
+		super(cfgFileName);
+		cfg = new ConfigReader(cfgFileName);
+		ledgerManageConfigFileName = cfg.getValue("LedgerManageConfigFileName");
+		fileLedgerRootName = cfg.getValue("LedgerRoot");
+		
+		ledgerManager = new LedgerManager(ledgerManageConfigFileName);
+		try {
+			fileLedger = new FileLedger(fileLedgerRootName);
+			fileLedger.loadLedger();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	// Set where the search starts and where it ends
+	public void setBoundaries(String startString, String endString) {
+		this.name = startString + "-" + endString;
+		gen = new WordGenerator(startString.length());
+		gen.setStartValue(startString);
+		gen.setEndValue(endString);
+		chrome = new ChromeHeadless(true);
+	}
+	
+	public void setTarget(String targetString) {
+		Integer[] startKey = WordGenerator.getFirstArrayOfKey(targetString, 0);
+		Integer[] endKey = WordGenerator.getLastArrayOfKey(targetString, 0);
+		String startStr = WordGenerator.convertArrayToString(startKey);
+		String endStr = WordGenerator.convertArrayToString(endKey);
+		setBoundaries(startStr, endStr);
+	}
+	
+	@Override
+	public void run() {
+		log4j.info(String.format("Starting ChromeWorker - %s", name));
+		keyList = new ArrayList<String>();
+		String value = null;
+		do {
+			String str = gen.toString();
+
+			ArrayList<String> result = chrome.scrapeTDKWordsWithKey(str);
+			for (int i = 0; i < result.size(); i++) {
+				String word = result.get(i);
+				ledgerManager.addToLedger(word, str);
+			}
+			
+			if (result.size() >= 9) {
+				Integer[] startArray = WordGenerator.getFirstArrayOfKey(str, 1);
+				Integer[] endArray = WordGenerator.getLastArrayOfKey(str, 1);
+				
+				String childStart = WordGenerator.convertArrayToString(startArray);
+				String childEnd = WordGenerator.convertArrayToString(endArray);
+				
+				ChromeWorker child = new ChromeWorker(cfg.getCfgFileName());
+				child.setBoundaries(childStart, childEnd);
+				Thread threadChild = new Thread(child);
+				threadChild.start();
+				try {
+					threadChild.join();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} 
+			fileLedger.addtoLedger(str);
+		} while ((value = gen.nextWord()) != null);
+		chrome.closeChromeHeadless();
+	}
+	
+	public void runThroughKeys(int focus) {// focus means number of characters which make a key to be checked after.
+		Locale turkishLoc = new Locale("tr", "TR");
+		int KEY_LENGTH = focus;
+		WordGenerator generator = new WordGenerator(KEY_LENGTH);
+		String LEDGER_BASE = "S:\\Ulvi\\wordspace\\Wordlet\\data\\Scrape_Ledger_" + focus + ".ledger";
+		FileLedger ledger = null;
+		try {
+			ledger = new FileLedger(LEDGER_BASE);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		boolean resultLedger = ledger.loadLedger();
+		if (!resultLedger) {
+			log4j.error("Ledger is not loaded succesfully, exitting application ..");
+			System.exit(-1);
+		}
+
+		String value = null;
+		chrome = new ChromeHeadless(true);	
+		
+		while ((value = generator.nextWord()) != null) {
+			String str = generator.toString();
+
+			if (ledger.isInledger(str)) {
+				log4j.info(String.format("Skipping key in ledger : %s", str));	
+				continue;
+			} else {
+				log4j.info(String.format("Processing key : %s", str));
+				
+			}
+			ledger.addtoLedger(str);
+		}
+		ledger.closeLedger();
+	}
+	public ArrayList<String> getKeyList()  {
+		return keyList;
+	}
+	
+	public static void main(String[] args) {
+		System.out.println("classpath=" + System.getProperty("java.class.path"));
+
+		ChromeWorker worker1  = new ChromeWorker(args[0]);
+		worker1.setBoundaries("aaa", "zzz");
+		Thread t1 = new Thread(worker1);
+		t1.start();
+
+	}
+
+}

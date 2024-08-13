@@ -1,0 +1,25 @@
+
+#Oracle Configuration
+db1.Driver=oracle.jdbc.driver.OracleDriver
+db1.URL=jdbc:oracle:thin:@RZR:1521:RZR
+db1.User=master
+db1.Password=master
+
+db1.SelectQuery1=SELECT ID, WORD FROM TDK_SCRAPED ORDER BY WORD
+db1.SelectQuery2=SELECT ID, WORD, PROCESSED, FOUND FROM WORDS_LOOKUPLEDGER
+db1.SelectQuery3=SELECT ID, WORD, PROCESSED, FOUND FROM WORDS_LOOKUPLEDGER
+
+db1.InsertQuery1=INSERT INTO TDK_MEANING (WORD, CHAPTER_NAME, WORDTYPE, MEANING_ID, MEANING, IMPORT_TIME) VALUES (?, ?, ?, ?, ?, ?)
+db1.InsertQuery2=INSERT INTO TDK_SAMPLE (WORD, CHAPTER_NAME, WORDTYPE, MEANING_ID, SAMPLE, AUTHOR, IMPORT_TIME) VALUES (?, ?, ?, ?, ?, ?, ?)
+
+db1.UpdateQuery1=UPDATE TDK_WORDS SET LEVEL2=?, UPDATE_TIME=? WHERE SOURCE=? AND WORD=? AND ID=?
+db1.DeleteQuery1=DELETE FROM TDK_WORDS WHERE WORD=?
+db1.DeleteQuery2=DELETE FROM WORDS_LOOKUPLEDGER WHERE WORD=?
+
+Download.Site=https://sozluk.gov.tr
+Download.ErrorPageIndicator=
+
+Export.Folder=S:\\Ulvi\\wordspace\\Wordlet\\export\\
+Import.File=S:\\Ulvi\\wordspace\\Wordlet\\export\\DictExport2.txt
+
+LoadLedger=false
