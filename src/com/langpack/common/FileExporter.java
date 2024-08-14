@@ -76,7 +76,6 @@ public class FileExporter {
 		}
 	}
 	
-
 	public void closeExportFile() {
 		try {
 			bout_export.flush();

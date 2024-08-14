@@ -16,9 +16,10 @@ import org.apache.pdfbox.text.PDFTextStripper;
 public class PDFContentReader {
 	public static final Logger logger = LogManager.getLogger("PDFTest");
 	private RandomAccessBufferedFileInputStream fis;
-	private FileExporter fex = null;
+	private File readFile = null;
 
-	public PDFContentReader(int count, File readFile, File exportFile) {
+	public PDFContentReader(int count, File inFile) {
+		readFile = inFile;
 		try {
 			if (!readFile.exists()) {
 				logger.error("[{}] File {} does not exist", count, readFile.getAbsolutePath());
@@ -28,30 +29,36 @@ public class PDFContentReader {
 		} catch (IOException e) {
 			logger.error("Error initializing file input stream", e);
 		}
-
-		try {
-			if (exportFile != null) {
-				fex = new FileExporter(exportFile);
-			}
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 
 	@SuppressWarnings("unused")
 	public String analyzeTextFollowingDashes(String intext) {
+
+		
+		StringBuilder sb = new StringBuilder();
 		if (intext == null || intext.isEmpty()) {
-			System.out.println("Input text is null or empty.");
-			return intext;
+			logger.error("Input text is null or empty.");
+
+			return null;
 		}
+		logger.debug("Processing string {} ", intext.length());
 
 		int length = intext.length();
 		int index = 0;
 
 		while (index < length) {
 			String cursor = intext.substring(index, index + 1);
-
+			int value = (int)(cursor.charAt(0));
+			
+			if (index == 126061) {
+				logger.info("Achieved ..");
+			}
+			
+			logger.debug("Processing file index {}, character {} ", index, value);
+			
+			Pattern patternNumber = Pattern.compile("\\d+");
+			Matcher matcherNumber = patternNumber.matcher(cursor);
+			
 			if ("-".equals(cursor)) {
 				// Check for next characters to match patterns
 				int start = index; // Start at the dash
@@ -73,7 +80,7 @@ public class PDFContentReader {
 					logger.debug("Matched '-\\r?\\n' pattern : ['{}']", foundPattern);
 					index += foundPattern.length();
 				} else {
-					logger.info("No pattern matched");
+					logger.debug("No pattern matched");
 					// Move to the next character
 					index++;
 				}
@@ -88,13 +95,20 @@ public class PDFContentReader {
 				Pattern patternNewline = Pattern.compile("\\r\\n");
 				Matcher matcherNewline = patternNewline.matcher(followingChars);
 				
+				Pattern patternCarriageReturnNoNewline = Pattern.compile("\\r|\\r\\d+");
+				Matcher matcherCarriageReturnNoNewline = patternCarriageReturnNoNewline.matcher(followingChars);
+				
 				if (matcherDashWithPageNumber.find()) {
 					String foundPattern = matcherDashWithPageNumber.group();
 					logger.debug("Matched '\\r\\n\\d+' pattern : ['{}']", foundPattern);
 					index += foundPattern.length();
 				} else if (matcherNewline.find()) {
 					String foundPattern = matcherNewline.group();
-					logger.debug("Matched '-\\r?\\n\\d+' pattern : ['{}']", foundPattern);
+					logger.debug("Matched '\\r\\n' pattern : ['{}']", foundPattern);
+					index += foundPattern.length();
+				} else if (matcherCarriageReturnNoNewline.find()) {
+					String foundPattern = matcherCarriageReturnNoNewline.group();
+					logger.debug("Matched '\\r|\\r\\d+' pattern : ['{}']", foundPattern);
 					index += foundPattern.length();
 				}
 
@@ -103,68 +117,42 @@ public class PDFContentReader {
 				int end = Math.min(start + 7, length); // Check up to 7 characters after the dash
 				String followingChars = intext.substring(start, end);
 
-				Pattern patternNewline = Pattern.compile("\\r\\n|\r");
+				Pattern patternNewline = Pattern.compile("\\n|\\n\\d+");
 				Matcher matcherNewline = patternNewline.matcher(followingChars);
 
 				if (matcherNewline.find()) {
 					String foundPattern = matcherNewline.group();
-					logger.debug("Matched '-\\r?\\n\\d+' pattern : ['{}']", foundPattern);
+					logger.debug("Matched '\\n' pattern : ['{}']", foundPattern);
+					index += foundPattern.length();
+				}
+
+			} else if (matcherNumber.find()) {
+				int start = index; // Start at the dash
+				int end = Math.min(start + 7, length); // Check up to 7 characters after the dash
+				String followingChars = intext.substring(start, end);
+
+				Pattern patternNumberdot = Pattern.compile("\\d+|\\d+\\.");
+				Matcher matcherNumberdot = patternNumberdot.matcher(followingChars);
+
+				if (matcherNumberdot.find()) {
+					String foundPattern = matcherNumberdot.group();
+					logger.debug("Matched '\"\\d+|\\d+\\.\"' pattern : ['{}']", foundPattern);
 					index += foundPattern.length();
 				}
 
 			} else {
-				if (fex != null) {
-					fex.writeStringToFile(cursor);
-				}
+				sb.append(cursor);
 				index++;
 				//logger.info("New text : [[ {} ]]", accText.toString());
 			}
 		}
 
-		return null;
-	}
-
-	private String applyFilters(String rawString) {
-		return correctSentenceEnds(rawString);
-	}
-
-	private String correctSentenceEnds(String intext) {
-		if (intext == null || intext.isEmpty()) {
-			return intext;
-		}
-
-		// Use a StringBuilder for efficient text manipulation
-		StringBuilder correctedText = new StringBuilder(intext);
-		int length = correctedText.length();
-		int index = 0;
-
-		while (index < length) {
-			char currentChar = correctedText.charAt(index);
-
-			if (currentChar == '-') {
-				// Check for "-\r\n" or "-\n" patterns
-				if (index + 1 < length
-						&& (correctedText.charAt(index + 1) == '\r' || correctedText.charAt(index + 1) == '\n')) {
-					if (index + 2 < length && correctedText.charAt(index + 2) == '\n') {
-						// Handle "-\r\n" or "-\n" pattern
-						correctedText.deleteCharAt(index); // Remove dash
-						correctedText.replace(index, index + 2, " "); // Replace with space
-						length -= 2; // Adjust length due to replacement
-					} else {
-						// Handle "-\r" or "-\n" pattern
-						correctedText.deleteCharAt(index); // Remove dash
-						correctedText.replace(index, index + 1, " "); // Replace with space
-						length -= 1; // Adjust length due to replacement
-					}
-				}
-			}
-
-			// Move to the next character
-			index++;
-		}
-
-		// Optional: Trim any leading or trailing whitespace
-		return correctedText.toString().trim();
+		String textContent = sb.toString();
+		
+		logger.info("Ended reading, ended with length {}. Now removing empty spaces.. ", textContent.length());
+		
+        String retval = StringProcessor.cleanBookString(textContent.toString());
+        return retval; // Trim to remove any trailing new lines
 	}
 
 	public String readContent() {

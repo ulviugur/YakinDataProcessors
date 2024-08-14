@@ -10,20 +10,26 @@ public class FileIterator {
 	String sourceFileBase = null;
 	String sourceFileExtension = null;
 	File sourceDir = null;
+	File currFile = null;
 	File[] processFileList = null;
 	boolean IS_DIRECTORY = false;
 	int fileCursor = -1;
 
-	public FileIterator(File targetFile) throws InvalidRequestException {
-		if (targetFile.isFile()) {
-			this.sourceDir = targetFile.getParentFile();
-			this.sourceFileExtension = findFileExtension(targetFile);
-			this.sourceFileBase = findFileBase(targetFile, sourceFileExtension);
-		} else if (targetFile.isDirectory()) {
+	public File getCurrFile() {
+		return currFile;
+	}
+	
+	public FileIterator(File sourceFile) throws InvalidRequestException {
+		if (sourceFile.isFile()) {
+			this.currFile = sourceFile;
+			this.sourceDir = sourceFile.getParentFile();
+			this.sourceFileExtension = findFileExtension(sourceFile);
+			this.sourceFileBase = findFileBase(sourceFile);
+		} else if (sourceFile.isDirectory()) {
 			IS_DIRECTORY = true;
-			processFileList = targetFile.listFiles();
-			File tmpNext = moveToNextTarget();
-			logger.info("Moved to the first file : {}", tmpNext);
+			processFileList = sourceFile.listFiles();
+			this.currFile = moveToNextTarget();
+			logger.info("Moved to the first file : {}", currFile);
 		} else {
 			throw new InvalidRequestException("Target file is not valid !!");
 		}
@@ -39,10 +45,11 @@ public class FileIterator {
 						// Skip processing deeper directories
 
 					} else if (targetFile.isFile()) {
+						this.currFile = targetFile;
 						this.sourceDir = targetFile.getParentFile();
 						this.sourceFileExtension = findFileExtension(targetFile);
-						this.sourceFileBase = findFileBase(targetFile, sourceFileExtension);
-						return targetFile;
+						this.sourceFileBase = findFileBase(targetFile);
+						return this.currFile;
 					}
 				} else {
 					return null;
@@ -55,7 +62,7 @@ public class FileIterator {
 		}
 	}
 
-	public static String findFileExtension(File sourceFile) {
+	public String findFileExtension(File sourceFile) {
 		String retval = null;
 		String name = sourceFile.getName();
 		String[] parts = name.split("\\.");
@@ -66,24 +73,13 @@ public class FileIterator {
 		return retval;
 	}
 
-	public static String findFileBase(File sourceFile, String extension) {
-		String KEY_PATTERN = "_v1.";
-		String retval = null;
+	public String findFileBase(File sourceFile) {
+		String fileExtension = findFileExtension(sourceFile);
 
-		String sourcefileName = sourceFile.getName();
-		if (extension != null) {
+		String tmpfileName = sourceFile.getName();
+		sourceFileBase = tmpfileName.substring(0, tmpfileName.length() - fileExtension.length() -1);
 
-		}
-		if (sourcefileName.contains(KEY_PATTERN)) {
-			logger.info("The file  {} already has a version number", sourcefileName);
-			retval = sourcefileName.substring(0, sourcefileName.indexOf(KEY_PATTERN));
-			retval = retval + KEY_PATTERN;
-		} else {
-			logger.info("The file {} doesn't have a version number", sourcefileName);
-			retval = sourcefileName + KEY_PATTERN;
-		}
-
-		return retval;
+		return sourceFileBase;
 	}
 
 	/*
@@ -95,13 +91,16 @@ public class FileIterator {
 	 */
 
 	public File getNextFile() {
+				
+		String KEY_PATTERN = "_v1.";
+		
 		File nextFile = null;
 		int FILE_VERSION = 0;
 		String tmpFilename = null;
 		int count = 0;
 
 		while (true) {
-			tmpFilename = sourceFileBase + count + "." + sourceFileExtension;
+			tmpFilename = sourceFileBase  + KEY_PATTERN + count + "." + sourceFileExtension;
 			File tmpFile = new File(sourceDir, tmpFilename);
 			if (tmpFile.exists()) { // if file exists and not searching for the first one
 				logger.info("Already exists : " + tmpFile.getName());
