@@ -149,10 +149,12 @@ public class BooktextImporter {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			logger.error("Exitting");
+			ledger.closeLedger();
 			System.exit(-1);
 		}
 		logger.info("BooktestImport process completed ..");
 		if (skippedList.size() > 0) {
+			ledger.closeLedger();
 			logger.warn("Skipped {} files : ", skippedList.size());
 			for (int i = 0; i < skippedList.size(); i++) {
 				logger.warn("\t[] Skipped file {}  ", i + 1, skippedList.get(i));
