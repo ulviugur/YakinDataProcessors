@@ -1,10 +1,11 @@
 package com.langpack.common;
 
 import java.util.ArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.HashSet;
+import java.util.Locale;
 
 public class StringProcessor {
+	public static Locale turkishLocale = new Locale.Builder().setLanguage("tr").setRegion("TR").build();
 
 	public static String cleanBookString(String input) {
 
@@ -33,26 +34,31 @@ public class StringProcessor {
 		String regex = "[\\x00-\\x1F\\x7F]";
 		String step7 = step6.replaceAll(regex, " ");
 
-		return step7;
+		String step8 = step7.replaceAll("\\u00AD", "");
+
+		return step8;
 	}
 
-	public static ArrayList<String> convertToKeywords(String input) {
+	public static HashSet<String> convertToKeywords(String input) {
 
-		String filterRegex = "\\s*|\\.|\\'|\\d*|,|!"; 
-		
-		String[] rawWords = input.split(filterRegex); 
+		String filterRegex = "\\s+|\\.|['‘’′“”«»–—]|\\d+|,|!|\"|;|\\?|:";
+		String[] rawWords = input.split(filterRegex);
 
-		ArrayList<String> filteredWords = new ArrayList<String>();
-		
+		HashSet<String> filteredWords = new HashSet<String>();
+
 		// drop invaluable data
 		for (int i = 0; i < rawWords.length; i++) {
 			String tmpWord = rawWords[i];
-			if (!tmpWord.matches(filterRegex)) {
-				filteredWords.add(tmpWord);
+			if (tmpWord.matches(filterRegex) || "".equals(tmpWord.trim()) || tmpWord.length() < 3) {
+				// skipping token
+			} else {
+				filteredWords.add(tmpWord.toLowerCase(turkishLocale));
 			}
-			
+
 		}
 		return filteredWords;
 	}
 
 }
+
+

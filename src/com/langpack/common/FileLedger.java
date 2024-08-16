@@ -27,7 +27,8 @@ public class FileLedger {
 	File targetFile = null;
 	Charset charset = null;
 	static Charset DEFAULT_CSET = Charset.forName("UTF-8");
-
+	
+	
 	public FileLedger(String tmpFileName) throws FileNotFoundException {
 		this(new File(tmpFileName));
 	}
@@ -39,6 +40,14 @@ public class FileLedger {
 	public FileLedger(File tmpFile, Charset cs) throws FileNotFoundException {
 		targetFile = tmpFile;
 		charset = cs;
+	}
+	
+	public File getLedgerFile() {
+		return targetFile;
+	}
+	
+	public int getLedgerLength() {
+		return _ledger.size();
 	}
 
 	public boolean isInledger(String searchKey) {
@@ -126,7 +135,7 @@ public class FileLedger {
 
 	public static void main(String[] args) {
 		try {
-			FileLedger ledger = new FileLedger("S:\\Ulvi\\wordspace\\Wordlet\\data\\TDKLedger_05.ledger");
+			FileLedger ledger = new FileLedger("C:\\tmp\\Ledger_Test.txt");
 			ledger.loadLedger();
 			String again = ledger.addtoLedger("@@@");
 			boolean ret1 = ledger.isInledger("kkk");

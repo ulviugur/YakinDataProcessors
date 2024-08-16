@@ -14,7 +14,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 
 public class PDFContentReader {
-	public static final Logger logger = LogManager.getLogger("PDFTest");
+	public static final Logger logger = LogManager.getLogger("PDFContentReader");
 	private RandomAccessBufferedFileInputStream fis;
 	private File readFile = null;
 

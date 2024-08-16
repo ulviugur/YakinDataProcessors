@@ -24,22 +24,26 @@ public class EPUBContentReader {
             zipFile = new ZipFile(epubFile);
 
             for (ZipEntry entry : zipFile.stream().toList()) {
-                if (entry.getName().startsWith(TEXT_DIR) && (entry.getName().endsWith(".html") || entry.getName().endsWith(".xhtml"))) {
+                if (entry.getName().startsWith(TEXT_DIR) && (entry.getName().endsWith(".html") || entry.getName().endsWith(".xhtml") || entry.getName().endsWith(".htm"))) {
                     InputStream inputStream = null;
                     try {
                         inputStream = zipFile.getInputStream(entry);
                         Document document = Jsoup.parse(inputStream, StandardCharsets.UTF_8.name(), "");
 
-                        Elements paragraphs = document.select("p");
-                        for (Element paragraph : paragraphs) {
-                            // Extract text from spans within each paragraph
-                            Elements spans = paragraph.select("span");
-                            for (Element span : spans) {
-                                textContent.append(span.text()).append("");
+                     // Select all elements that might contain text
+                        Elements elements = document.select("*"); // Select all elements
+
+                        // Iterate through each selected element
+                        for (Element element : elements) {
+                            // Extract and append text content from the element and its children
+                            String elementText = element.text().trim(); // Text from the element and its children
+
+                            // Append text content if it's not empty
+                            if (!elementText.isEmpty()) {
+                                textContent.append(elementText).append("\n");
                             }
-                            // Append text of paragraph itself
-                            textContent.append(paragraph.ownText()).append("\n");
                         }
+
                     } finally {
                         if (inputStream != null) {
                             try {

@@ -5,6 +5,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,9 +34,9 @@ public class ProcessDocumentFiles {
 
 		String[] extensionsArray = argsObject.get("--extensions").split(" ");
 		List<String> extensionsList = Arrays.asList(extensionsArray);
+		
 
 		File sourceDir = new File(sourceDirPath);
-		File targetDir = new File(targetDirPath);
 
 		FileIterator sourceIter = null;
 
@@ -46,31 +48,23 @@ public class ProcessDocumentFiles {
 			logger.error("Source directory cannot be initialized under {}", sourceDir.getAbsolutePath());
 		}
 
-//		FileIterator targetIter = null;
-//		try {
-//			targetIter = new FileIterator(targetDir);
-//		} catch (InvalidRequestException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//			logger.error("Target directory cannot be initialized under {}", targetDir.getAbsolutePath());
-//			System.exit(-1);
-//		}
-
 		int totalCount = 0;
 
 		File currSourceFile = sourceIter.getCurrFile();
 
 		try {
 			while (currSourceFile != null) {
+				logger.info("[{}] Current source file: \"{}\"", totalCount, currSourceFile.getAbsolutePath());
+
 				String ext = sourceIter.findFileExtension(currSourceFile);
 				if (extensionsList.contains(ext)) {
 
 					String baseFileName = sourceIter.findFileBase(currSourceFile);
+					String cleanBaseFileName = cleanBaseFilename(baseFileName);
 
-					String exportFileName = targetDirPath + baseFileName + "." + "txt";
+					String exportFileName = targetDirPath + cleanBaseFileName + "." + "txt";
 					File exportFile = new File(exportFileName);
 
-					logger.info("[{}] Current source file: \"{}\"", totalCount, currSourceFile.getAbsolutePath());
 					String content = null;
 
 					if (currSourceFile.getAbsolutePath().toLowerCase().contains("pdf")) {
@@ -144,5 +138,55 @@ public class ProcessDocumentFiles {
 			logger.error("Exitting");
 			System.exit(-1);
 		}
+	}
+
+	public static String cleanBaseFilename(String tmpFilename) {
+
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < tmpFilename.length(); i++) {
+			String letter = tmpFilename.substring(i, i + 1);
+			if (letter.equals("\u2552")) {
+				sb.append("ı");
+			} else {
+				sb.append(letter);
+			}
+		}
+
+		String updatedStr = sb.toString();
+
+		Pattern pattern = Pattern.compile("\\(([^\\(\\)]+) \\[(.+)\\]\\)");
+
+		String newFileName = updatedStr;
+		Matcher matcher = pattern.matcher(updatedStr);
+        if (matcher.find()) {
+            // Extract the author's name parts from the match
+            String authorPart1 = matcher.group(1).trim();  // (Orson Scott Card)
+            String authorPart2 = matcher.group(2).trim();  // [Card, Orson Scott]
+
+            boolean keywordsMatching = areKeywordsMatching(authorPart1, authorPart2);
+            // Check if the two parts are the same but reversed
+            if (keywordsMatching) {
+                // Remove the second occurrence (inside the square brackets)
+                newFileName = matcher.replaceAll("($1)");
+            }
+        }
+        String strippedFileName = newFileName.replace("(z-lib.org)", "");
+        String strippedFileName2 = strippedFileName.replaceAll("\\s+$", "");
+        String strippedFileName3 = strippedFileName2.replaceAll("\\s+", "_");
+        
+        return strippedFileName3;
+	}
+
+	private static boolean areKeywordsMatching(String part1, String part2) {
+	    // Split the names into individual words by spaces or commas
+	    String[] name1Parts = part1.split("\\s*,\\s*|\\s+");
+	    String[] name2Parts = part2.split("\\s*,\\s*|\\s+");
+
+	    // Sort the arrays to ensure the words can be compared regardless of order
+	    Arrays.sort(name1Parts);
+	    Arrays.sort(name2Parts);
+
+	    // Check if the sorted arrays are equal
+	    return Arrays.equals(name1Parts, name2Parts);
 	}
 }
