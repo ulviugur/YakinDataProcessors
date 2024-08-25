@@ -108,13 +108,10 @@ public class FileIterator {
 				count++;
 			} else { // if file does not exist
 				logger.info("Next file identified  : " + tmpFile.getName());
+				nextFile = tmpFile;
 				break;
 			}
 		}
-
-		FILE_VERSION++;
-		tmpFilename = sourceFileBase + FILE_VERSION + "." + sourceFileExtension;
-		nextFile = new File(sourceDir, tmpFilename);
 
 		return nextFile;
 	}

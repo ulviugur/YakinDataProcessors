@@ -21,7 +21,7 @@ import com.langpack.common.InvalidRequestException;
 import com.langpack.common.StringProcessor;
 import com.langpack.common.TextFileReader;
 
-public class BooktextImporter {
+public class BooktextImporterDB {
 	public static final Logger logger = LogManager.getLogger("ImportDocumentFiles");
 
 	File sourceDir = null;
@@ -42,7 +42,7 @@ public class BooktextImporter {
 
 	ArrayList<String> skippedList = new ArrayList<String>();
 
-	public BooktextImporter(File sourceDir, String dbConnStr, String user, String pass, String dbDriverStr, String ledgerFileStr) {
+	public BooktextImporterDB(File sourceDir, String dbConnStr, String user, String pass, String dbDriverStr, String ledgerFileStr) {
 		try {
 			fiter = new FileIterator(sourceDir);
 		} catch (InvalidRequestException e) {
@@ -135,7 +135,7 @@ public class BooktextImporter {
 					}
 					logger.info("[{}] Inserted {} records from \"{}\" .", totalCount, insertCount,
 							currSourceFile.getName());
-					ledger.addtoLedger(currSourceFile.getName());
+					ledger.addtoLedger(currSourceFile.getAbsolutePath());
 				} else {
 					logger.info("[{}] Source file {} could not be opened ! Skipping.", totalCount,
 							currSourceFile.getAbsolutePath());
@@ -178,7 +178,7 @@ public class BooktextImporter {
 
 		File sourceDir = new File(sourceDirPath);
 
-		BooktextImporter process = new BooktextImporter(sourceDir, targetDBURL, dbUser, dbPass, dbDriver, ledgerFilePath);
+		BooktextImporterDB process = new BooktextImporterDB(sourceDir, targetDBURL, dbUser, dbPass, dbDriver, ledgerFilePath);
 		process.runFiles();
 
 	}
