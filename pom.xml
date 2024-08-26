@@ -18,6 +18,13 @@
 			</plugin>
 		</plugins>
 	</build>
+	<repositories>
+		<repository>
+			<id>zemberek-repo</id>
+			<name>zemberek Maven Repo on Github</name>
+			<url>https://raw.github.com/ahmetaa/maven-repo/master</url>
+		</repository>
+	</repositories>
 	<dependencies>
 		<!--
 		https://mvnrepository.com/artifact/org.seleniumhq.selenium/selenium-chrome-driver -->
@@ -146,7 +153,23 @@
 			<artifactId>mongo-java-driver</artifactId>
 			<version>3.12.10</version> <!-- Or the latest version -->
 		</dependency>
-
+		<!-- Zemberek Core Dependency -->
+		<dependency>
+			<groupId>zemberek-nlp</groupId>
+			<artifactId>zemberek-core</artifactId>
+			<version>0.17.1</version>
+		</dependency>
+		<!-- Zemberek Morphology Dependency -->
+		<dependency>
+			<groupId>zemberek-nlp</groupId>
+			<artifactId>zemberek-morphology</artifactId>
+			<version>0.17.1</version>
+		</dependency>
+		<dependency>
+            <groupId>zemberek-nlp</groupId>
+            <artifactId>zemberek-normalization</artifactId>
+            <version>0.17.0</version>
+        </dependency>
 	</dependencies>
 
 </project>
