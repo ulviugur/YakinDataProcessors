@@ -31,7 +31,9 @@ import com.langpack.common.StringProcessor;
 import com.langpack.common.TextFileReader;
 
 // Doesn't work through a database but over a file
-public class BooktextImporterFile {
+// Imports raw text into a file as they come. 
+// !! Does not create a unique list 
+public class BooktextRawImporterToFile {
 	public static final Logger logger = LogManager.getLogger("BooktextImporterFile");
 
 	File sourceDir = null;
@@ -44,7 +46,6 @@ public class BooktextImporterFile {
 
 	// Using a file as database source and use a HashMap to prevent duplicates
 	File dbInFile = null;
-	Map<String, String> dbContent = new LinkedHashMap<>();
 
 	FileIterator dbFileIter = null;
 
@@ -53,7 +54,9 @@ public class BooktextImporterFile {
 	TextFileReader txtInFileReader = null;
 	FileExporter dbExporter = null;
 
-	public BooktextImporterFile(File sourceDir, String ledgerFileStr, String dbFileStr) {
+	public BooktextRawImporterToFile(File sourceDir, String ledgerFileStr, String dbFileStr,
+			String specialCharsFilePath) {
+		StringProcessor.setSpecialCharsFile(specialCharsFilePath);
 		try {
 			txtFileIter = new FileIterator(sourceDir);
 		} catch (InvalidRequestException e) {
@@ -74,15 +77,14 @@ public class BooktextImporterFile {
 
 		dbInFile = new File(dbFileStr);
 
-		txtInFileReader = new TextFileReader(dbInFile);
-		String line = null;
 		try {
-			while ((line = txtInFileReader.readLine()) != null) {
-				String[] rowData = line.split("\\t");
-				dbContent.put(rowData[0], rowData[1]);
-			}
-			logger.info("Read {} records from sourcefile: \"{}\"", dbContent.size(), dbInFile.getAbsolutePath());
-		} catch (IOException e) {
+			dbFileIter = new FileIterator(dbInFile);
+			File nextDBFile = dbFileIter.getNextFile();
+			dbExporter = new FileExporter(nextDBFile);
+		} catch (InvalidRequestException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -119,19 +121,14 @@ public class BooktextImporterFile {
 
 					int insertCount = 0;
 					while (iter.hasNext()) {
-						String word = iter.next();
-						word = word.replace("-", "");
+						String word1 = iter.next();
+						String word = word1.replaceAll(StringProcessor.SPECIAL_CHARS_REGEX, "");
+						String book = currSourceFile.getName();
 
-						// check if the word is already in the database
+						String line = word + "\t" + book;
+						dbExporter.writeLineToFile(line);
 
-						boolean existing = dbContent.containsKey(word);
-						if (!existing) {
-							dbContent.put(word, currSourceFile.getName());
-							insertCount += 1;
-
-						} else {
-							logger.debug("Skipping word as it already exists ! >>  \"{}\"", word);
-						}
+						insertCount += 1;
 
 					}
 					logger.info("[{}] Inserted {} records from \"{}\" .", fileCount, insertCount,
@@ -147,41 +144,16 @@ public class BooktextImporterFile {
 				fileCount++;
 			}
 			// write to the database to the new dbfile
-			try {
-				Map<String, String> sortedMap = new TreeMap<>();
 
-				Iterator<String> iter = dbContent.keySet().iterator();
-
-				while (iter.hasNext()) {
-					String word = iter.next();
-					String book = dbContent.get(word);
-					sortedMap.put(word, book);
-				}
-
-				dbFileIter = new FileIterator(dbInFile);
-				File nextDBFile = dbFileIter.getNextFile();
-				logger.info("Next dbfile : {}, writing \"{}\" records in total.", nextDBFile.getAbsolutePath(),
-						dbContent.size());
-				dbExporter = new FileExporter(nextDBFile);
-				Iterator<String> iterSorted = sortedMap.keySet().iterator();
-				while (iterSorted.hasNext()) {
-					String word = iterSorted.next();
-					String book = dbContent.get(word);
-					String line = word + "\t" + book;
-					dbExporter.writeLineToFile(line);
-				}
-				dbExporter.closeExportFile();
-				logger.info("New file written, export completed");
-			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			dbExporter.closeExportFile();
+			logger.info("New file written, export completed");
+			ledger.closeLedger();
 
 		} catch (InvalidRequestException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			logger.error("Exitting");
-			ledger.closeLedger();
+
 			System.exit(-1);
 		}
 		logger.info("BooktestImport process completed ..");
@@ -195,15 +167,14 @@ public class BooktextImporterFile {
 	}
 
 	public static void main(String[] args) {
-		
-		//StringProcessor.writeSpecialCharactersToAFile("C:\\tmp\\test\\SpecialChars.txt", "C:\\tmp\\test\\SpecialChars.lst");
-	
-		StringProcessor.setSpecialCharsFile("C:\\tmp\\test\\SpecialChars.lst");
-		
-		StringProcessor.cleanTextFile("C:\\tmp\\test\\SpecialChars.txt");
-		
-		System.exit(0);
-		
+
+		// StringProcessor.writeSpecialCharactersToAFile("C:\\tmp\\test\\SpecialChars.txt",
+		// "C:\\tmp\\test\\SpecialChars.lst");
+
+		// StringProcessor.setSpecialCharsFile("C:\\tmp\\test\\SpecialChars.lst");
+
+		// StringProcessor.cleanTextFile("C:\\tmp\\test\\SpecialChars.txt");
+
 		CommandLineArgs argsObject = new CommandLineArgs(args);
 
 		String sourceDirPath = argsObject.get("--inputdir");
@@ -211,9 +182,12 @@ public class BooktextImporterFile {
 		String ledgerFilePath = argsObject.get("--ledgerfile");
 		String targetDBFilePath = argsObject.get("--dbinfile");
 
+		String specialCharsFile = argsObject.get("--specialcharsfile");
+
 		File sourceDir = new File(sourceDirPath);
 
-		BooktextImporterFile process = new BooktextImporterFile(sourceDir, ledgerFilePath, targetDBFilePath);
+		BooktextRawImporterToFile process = new BooktextRawImporterToFile(sourceDir, ledgerFilePath, targetDBFilePath,
+				specialCharsFile);
 		process.runFiles();
 
 	}

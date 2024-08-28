@@ -20,7 +20,7 @@ public class FileIterator {
 	}
 	
 	public FileIterator(File sourceFile) throws InvalidRequestException {
-		if (sourceFile.isFile()) {
+		if (sourceFile.isFile() || !sourceFile.exists()) {
 			this.currFile = sourceFile;
 			this.sourceDir = sourceFile.getParentFile();
 			this.sourceFileExtension = findFileExtension(sourceFile);

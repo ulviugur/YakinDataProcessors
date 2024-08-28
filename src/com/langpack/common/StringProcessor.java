@@ -22,7 +22,7 @@ public class StringProcessor {
 	public static final Logger logger = LogManager.getLogger("BooktextImporterFile");
 	private static HashSet<String> SPECIAL_CHARS_ARRAY = new HashSet<String>();
 
-	private static String SPECIAL_CHARS_REGEX = null;
+	public static String SPECIAL_CHARS_REGEX = null;
 
 	public static String cleanBookString(String input) {
 
