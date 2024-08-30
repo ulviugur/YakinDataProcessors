@@ -16,6 +16,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -378,6 +379,21 @@ public class GlobalUtils {
 
 		return retval;
 	}
+	
+	public static String convertSettoStringLines(Set<String> input, String endOflineChars) {
+		if (endOflineChars== null) {
+			endOflineChars = "\r\n";
+		}
+		StringBuilder sb = new StringBuilder();
+		Iterator<String> iter = input.iterator();
+		
+		while (iter.hasNext()) {
+			String line = iter.next();
+			sb.append(line); sb.append(endOflineChars);
+		}
+		
+		return sb.toString();
+	}
 
 	public static String getTHABaseName(String value) {
 		StringBuilder sb = new StringBuilder();
@@ -413,11 +429,27 @@ public class GlobalUtils {
 	}
 
 	public static String getFileExtension(String fullName) {
-		try {
-			return fullName.substring(fullName.lastIndexOf(".") + 1);
-		} catch (Exception e) {
+		int tmpIndex = fullName.lastIndexOf(".");
+		if (tmpIndex <0 ) {
 			return "";
+		} else {
+			return fullName.substring(tmpIndex + 1);
 		}
+	}
+	
+	public static String getFileBase(String fileName) {
+		File tmpFile = new File(fileName);
+		String base = getFileBase(tmpFile);
+		return base;
+	}
+	
+	public static String getFileBase(File sourceFile) {
+		String fileExtension = getFileExtension(sourceFile);
+
+		String tmpfileName = sourceFile.getName();
+		String sourceFileBase = tmpfileName.substring(0, tmpfileName.length() - fileExtension.length() -1);
+
+		return sourceFileBase;
 	}
 
 	public static String replaceWords(String main, String remove, boolean caseSensitive) {

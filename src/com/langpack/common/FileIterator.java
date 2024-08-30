@@ -23,8 +23,11 @@ public class FileIterator {
 		if (sourceFile.isFile() || !sourceFile.exists()) {
 			this.currFile = sourceFile;
 			this.sourceDir = sourceFile.getParentFile();
-			this.sourceFileExtension = findFileExtension(sourceFile);
-			this.sourceFileBase = findFileBase(sourceFile);
+			if (this.sourceDir == null) {
+				this.sourceDir = new File("./");
+			}
+			this.sourceFileExtension = GlobalUtils.getFileExtension(sourceFile);
+			this.sourceFileBase = GlobalUtils.getFileBase(sourceFile);
 		} else if (sourceFile.isDirectory()) {
 			IS_DIRECTORY = true;
 			processFileList = sourceFile.listFiles();
@@ -47,8 +50,8 @@ public class FileIterator {
 					} else if (targetFile.isFile()) {
 						this.currFile = targetFile;
 						this.sourceDir = targetFile.getParentFile();
-						this.sourceFileExtension = findFileExtension(targetFile);
-						this.sourceFileBase = findFileBase(targetFile);
+						this.sourceFileExtension = GlobalUtils.getFileExtension(targetFile);
+						this.sourceFileBase = GlobalUtils.getFileBase(targetFile);
 						return this.currFile;
 					}
 				} else {
@@ -62,25 +65,6 @@ public class FileIterator {
 		}
 	}
 
-	public String findFileExtension(File sourceFile) {
-		String retval = null;
-		String name = sourceFile.getName();
-		String[] parts = name.split("\\.");
-		if (parts.length > 1) {
-			retval = parts[parts.length - 1];
-		}
-
-		return retval;
-	}
-
-	public String findFileBase(File sourceFile) {
-		String fileExtension = findFileExtension(sourceFile);
-
-		String tmpfileName = sourceFile.getName();
-		sourceFileBase = tmpfileName.substring(0, tmpfileName.length() - fileExtension.length() -1);
-
-		return sourceFileBase;
-	}
 
 	/*
 	 * private String findFileBase(File importDir) { String KEY_PATTERN = "_v1.";
@@ -103,11 +87,11 @@ public class FileIterator {
 			tmpFilename = sourceFileBase  + KEY_PATTERN + count + "." + sourceFileExtension;
 			File tmpFile = new File(sourceDir, tmpFilename);
 			if (tmpFile.exists()) { // if file exists and not searching for the first one
-				logger.info("Already exists : " + tmpFile.getName());
+				logger.debug("Already exists : " + tmpFile.getName());
 				FILE_VERSION = count;
 				count++;
 			} else { // if file does not exist
-				logger.info("Next file identified  : " + tmpFile.getName());
+				logger.debug("Next file identified  : " + tmpFile.getName());
 				nextFile = tmpFile;
 				break;
 			}

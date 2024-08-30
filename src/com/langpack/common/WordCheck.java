@@ -52,7 +52,7 @@ public class WordCheck {
 	        WordAnalysis analysis = morphology.analyze(word);
 	        if (analysis.analysisCount() > 0) {
 	            SingleAnalysis bestAnalysis = analysis.getAnalysisResults().get(0);
-	            return new WordModel(WordType.CORRECT_WORD, word, word, bestAnalysis.getStems().get(0));
+	            return new WordModel(WordType.EXACT_MATCH, word, word, bestAnalysis.getStems().get(0));
 	        }
 
 	     // Step 2: Perform informal analysis and get possible correction
@@ -119,7 +119,7 @@ public class WordCheck {
 	            System.out.println("Root Word: " + (result.getRootWord() != null ? result.getRootWord() : "N/A"));
 	            System.out.println("Word: " + spellChecker.suggestForWord(word));
 	         // Print the first analysis result
-	            if (result.getType() == WordType.CORRECT_WORD || result.getType() == WordType.POSSIBLE_MATCH) {
+	            if (result.getType() == WordType.EXACT_MATCH || result.getType() == WordType.POSSIBLE_MATCH) {
 	                WordAnalysis wordAnalysis = wordCheck.morphology.analyze(result.getMappedWord() != null ? result.getMappedWord() : word);
 	                if (wordAnalysis.analysisCount() > 0) {
 	                    SingleAnalysis firstAnalysis = wordAnalysis.getAnalysisResults().get(0);

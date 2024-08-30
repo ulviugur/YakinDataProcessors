@@ -170,6 +170,11 @@
             <artifactId>zemberek-normalization</artifactId>
             <version>0.17.0</version>
         </dependency>
+		<dependency>
+			<groupId>com.yakin</groupId>
+			<artifactId>morphtr2</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 
 </project>
