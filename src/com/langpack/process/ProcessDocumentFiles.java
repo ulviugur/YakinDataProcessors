@@ -16,6 +16,7 @@ import com.langpack.common.EPUBContentReader;
 import com.langpack.common.FileExporter;
 import com.langpack.common.FileIterator;
 import com.langpack.common.FileLedger;
+import com.langpack.common.GlobalUtils;
 import com.langpack.common.InvalidRequestException;
 import com.langpack.common.PDFContentReader;
 
@@ -53,14 +54,14 @@ public class ProcessDocumentFiles {
 			while (currSourceFile != null) {
 				logger.info("[{}] Current source file: \"{}\"", totalCount, currSourceFile.getAbsolutePath());
 
-				String ext = sourceIter.findFileExtension(currSourceFile);
+				String ext = GlobalUtils.getFileExtension(currSourceFile);
 				if (extensionsList.contains(ext)) {
 
 					if (ledger.isInledger(currSourceFile.getAbsolutePath())) {
 						logger.info("The file exists in ledger, skipping {} ..", currSourceFile.getAbsolutePath());
 					} else {
 
-						String baseFileName = sourceIter.findFileBase(currSourceFile);
+						String baseFileName = GlobalUtils.getFileBase(currSourceFile);
 						String cleanBaseFileName = cleanBaseFilename(baseFileName);
 
 						String exportFileName = targetDirPath + cleanBaseFileName + "." + "txt";
