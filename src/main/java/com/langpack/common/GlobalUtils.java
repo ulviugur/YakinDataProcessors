@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
@@ -335,7 +336,7 @@ public class GlobalUtils {
 		return sb.toString();
 	}
 
-	public static String convertArraytoString(ArrayList<Object> array, String separator) {
+	public static String convertArraytoString(List<Object> array, String separator) {
 		StringBuilder sb = new StringBuilder();
 		if (array != null) {
 			for (int i = 0; i < array.size(); i++) {

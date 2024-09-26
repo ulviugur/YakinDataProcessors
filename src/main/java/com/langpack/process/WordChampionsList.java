@@ -24,9 +24,9 @@ import com.langpack.common.FileIterator;
 import com.langpack.common.GlobalUtils;
 import com.langpack.common.InvalidRequestException;
 import com.langpack.common.TextFileReader;
-import com.yakin.morphtr.AnalysisWrapper;
-import com.yakin.morphtr.WordModel;
-import com.yakin.morphtr.WordType;
+import com.langpack.model.AnalysisWrapper;
+import com.langpack.model.WordModel;
+import com.langpack.model.WordType;
 
 // Doesn't work through a database but over a file
 // Imports raw text into a file as they come. 

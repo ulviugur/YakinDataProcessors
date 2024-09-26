@@ -106,4 +106,9 @@ public class XLChannel extends DataChannel {
 		// TODO Auto-generated method stub
 
 	}
+	
+	public XSSFWorkbook getWorkbookObject() {
+		// TODO Auto-generated method stub
+		return wb;
+	}
 }

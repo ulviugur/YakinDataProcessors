@@ -1,17 +1,22 @@
-package com.langpack.common;
+package com.langpack.model;
 
 public class WordModel {
 	private WordType type;
 	private String originalWord;
 	private String mappedWord;
+	private String stem;
 	private String rootWord;
+	
+	public WordModel() {
+        // Default constructor
+    }
 
-	public WordModel (WordType type, String originalWord, String mappedWord, String rootWord) {
+	public WordModel (WordType type, String originalWord, String mappedWord, String stem, String rootWord) {
 		this.type = type;
 		this.originalWord = originalWord;
 		this.mappedWord = mappedWord;
+		this.stem = stem;
 		this.rootWord = rootWord;
-		
 	}
 	
 	public WordType getType() {
@@ -38,6 +43,14 @@ public class WordModel {
 		this.mappedWord = mappedWord;
 	}
 
+	public String getStem() {
+		return stem;
+	}
+
+	public void setStem(String stem) {
+		this.stem = stem;
+	}
+	
 	public String getRootWord() {
 		return rootWord;
 	}
@@ -45,16 +58,17 @@ public class WordModel {
 	public void setRootWord(String rootWord) {
 		this.rootWord = rootWord;
 	}
-	
+
 	@Override
 	public String toString() {
 		return "WordCheck{" +
 				"type=" + type +
 				", originalWord='" +originalWord + '\'' +
 				", mappedWord='" + mappedWord + '\'' +
-                ", rootWord='" + rootWord + '\'' +
+                ", stem='" + stem + '\'' +
                 '}';
 	}
+
 
 
 }

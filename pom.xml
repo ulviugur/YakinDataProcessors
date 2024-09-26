@@ -5,19 +5,83 @@
 	<groupId>YakinDataProcessors</groupId>
 	<artifactId>YakinDataProcessors</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<properties>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
+		<lombok.version>1.18.34</lombok.version>
+	</properties>
 	<build>
-		<sourceDirectory>src</sourceDirectory>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.8.1</version>
 				<configuration>
-					<source>1.8</source>
-					<target>1.8</target>
+					<source>${maven.compiler.source}</source>
+					<target>${maven.compiler.target}</target>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.4.1</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<transformers>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<mainClass>
+										com.langpack.process.BookQuoteBatch</mainClass>
+								</transformer>
+							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Add this plugin to include additional source directories -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>3.2.0</version>
+				<executions>
+					<execution>
+						<id>add-source</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>add-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<!-- Default source directory -->
+								<source>src</source>
+								<!-- Additional source directory (Update path as
+								needed) -->
+								<!--
+								<source>C:\Ulvi\superspace\MorphTR2\src\main\java</source> -->
+							</sources>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
+	<profiles>
+		<profile>
+			<id>include-shared</id>
+			<build>
+				<resources>
+					<resource>
+						<directory>/path/to/shared-library/src/main/resources</directory>
+					</resource>
+				</resources>
+			</build>
+		</profile>
+	</profiles>
 	<repositories>
 		<repository>
 			<id>zemberek-repo</id>
@@ -26,155 +90,167 @@
 		</repository>
 	</repositories>
 	<dependencies>
-		<!--
-		https://mvnrepository.com/artifact/org.seleniumhq.selenium/selenium-chrome-driver -->
+		<!-- Selenium Chrome Driver -->
 		<dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
 			<artifactId>selenium-chrome-driver</artifactId>
 			<version>4.23.1</version>
 		</dependency>
-
-		<!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
+		<!-- Jsoup -->
 		<dependency>
 			<groupId>org.jsoup</groupId>
 			<artifactId>jsoup</artifactId>
 			<version>1.13.1</version>
 		</dependency>
-
+		<!-- Commons IO -->
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
 			<version>2.8.0</version>
 		</dependency>
-
+		<!-- Log4j2 -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-api</artifactId>
-			<version>2.20.0</version> <!-- Use the latest stable version -->
+			<version>2.20.0</version>
 		</dependency>
-
-		<!-- Log4j2 Core -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-core</artifactId>
-			<version>2.20.0</version> <!-- Use the latest stable version -->
+			<version>2.20.0</version>
 		</dependency>
-
-		<!-- Optional: Log4j2 SLF4J Binding (if you use SLF4J) -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-slf4j-impl</artifactId>
-			<version>2.20.0</version> <!-- Use the latest stable version -->
+			<version>2.20.0</version>
 		</dependency>
-		<!--
-		https://mvnrepository.com/artifact/com.healthmarketscience.jackcess/jackcess -->
+		<!-- Jackcess -->
 		<dependency>
 			<groupId>com.healthmarketscience.jackcess</groupId>
 			<artifactId>jackcess</artifactId>
 			<version>4.0.0</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/com.jayway.jsonpath/json-path -->
+		<!-- JsonPath -->
 		<dependency>
 			<groupId>com.jayway.jsonpath</groupId>
 			<artifactId>json-path</artifactId>
 			<version>2.5.0</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.apache.pdfbox/pdfbox -->
+		<!-- Apache PDFBox -->
 		<dependency>
 			<groupId>org.apache.pdfbox</groupId>
 			<artifactId>pdfbox</artifactId>
 			<version>2.0.22</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.hibernate/hibernate-core -->
+		<!-- Hibernate Core -->
 		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-core</artifactId>
 			<version>5.4.27.Final</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
+		<!-- Gson -->
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 			<version>2.8.6</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.testng/testng -->
+		<!-- TestNG -->
 		<dependency>
 			<groupId>org.testng</groupId>
 			<artifactId>testng</artifactId>
 			<version>7.3.0</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/com.oracle.database.jdbc/ojdbc8 -->
+		<!-- Oracle JDBC Driver -->
 		<dependency>
 			<groupId>com.oracle.database.jdbc</groupId>
 			<artifactId>ojdbc8</artifactId>
 			<version>21.1.0.0</version>
 		</dependency>
-		<!-- Apache POI Core Library -->
+		<!-- Apache POI -->
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi</artifactId>
-			<version>5.2.3</version> <!-- Use the latest stable version -->
+			<version>5.2.3</version>
 		</dependency>
-
-		<!-- Apache POI XSSF Library for working with .xlsx files -->
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
-			<version>5.2.3</version> <!-- Use the latest stable version -->
+			<version>5.2.3</version>
 		</dependency>
-
-		<!-- https://mvnrepository.com/artifact/org.apache.poi/poi-ooxml-schemas -->
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml-schemas</artifactId>
 			<version>4.1.2</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.json/json -->
+		<!-- JSON library -->
 		<dependency>
 			<groupId>org.json</groupId>
 			<artifactId>json</artifactId>
 			<version>20240303</version>
 		</dependency>
-
-		<!-- XMLBeans library (required for some POI functionalities) -->
+		<!-- XMLBeans -->
 		<dependency>
 			<groupId>org.apache.xmlbeans</groupId>
 			<artifactId>xmlbeans</artifactId>
-			<version>5.1.1</version> <!-- Use the latest stable version -->
+			<version>5.1.1</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
-		<dependency>
-			<groupId>org.jsoup</groupId>
-			<artifactId>jsoup</artifactId>
-			<version>1.18.1</version>
-		</dependency>
+		<!-- MongoDB Java Driver -->
 		<dependency>
 			<groupId>org.mongodb</groupId>
 			<artifactId>mongo-java-driver</artifactId>
-			<version>3.12.10</version> <!-- Or the latest version -->
+			<version>3.12.10</version>
 		</dependency>
-		<!-- Zemberek Core Dependency -->
+		<!-- Zemberek NLP -->
 		<dependency>
 			<groupId>zemberek-nlp</groupId>
 			<artifactId>zemberek-core</artifactId>
 			<version>0.17.1</version>
 		</dependency>
-		<!-- Zemberek Morphology Dependency -->
 		<dependency>
 			<groupId>zemberek-nlp</groupId>
 			<artifactId>zemberek-morphology</artifactId>
 			<version>0.17.1</version>
 		</dependency>
+		<!-- Zemberek Tokenization Dependency -->
 		<dependency>
-            <groupId>zemberek-nlp</groupId>
-            <artifactId>zemberek-normalization</artifactId>
-            <version>0.17.0</version>
-        </dependency>
-		<dependency>
-			<groupId>com.yakin</groupId>
-			<artifactId>morphtr2</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<groupId>zemberek-nlp</groupId>
+			<artifactId>zemberek-tokenization</artifactId>
+			<version>0.17.1</version>
 		</dependency>
-	</dependencies>
+		<!-- Zemberek Normalization Dependency -->
+		<dependency>
+			<groupId>zemberek-nlp</groupId>
+			<artifactId>zemberek-normalization</artifactId>
+			<version>0.17.0</version>
+		</dependency>
+		<!-- Apache Commons CSV -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-csv</artifactId>
+			<version>1.8</version>
+		</dependency>
+		<!-- Lombok -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>${lombok.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-mongodb</artifactId>
+			<version>3.4.0</version> <!-- Update to the latest version -->
+		</dependency>
+		<dependency>
+			<groupId>org.mongodb</groupId>
+			<artifactId>mongodb-driver-sync</artifactId>
+			<version>4.9.0</version> <!-- Update to the latest version -->
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.15.2</version> <!-- Use the latest version -->
+		</dependency>
 
+	</dependencies>
 </project>

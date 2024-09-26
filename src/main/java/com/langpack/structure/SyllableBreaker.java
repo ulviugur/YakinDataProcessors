@@ -1,6 +1,8 @@
 package com.langpack.structure;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.Locale;
 
 import com.langpack.common.ConfigReader;
@@ -24,11 +26,14 @@ public class SyllableBreaker {
 			"m", "n", "p", "r", "s", "ş", "t", "v", "y", "z" };
 	Locale TURKISH_LOCALE = new Locale("tr", "TR");
 
+	public static String WORD_SEPARATOR = "_";
+	public static String SYL_SEPARATOR = ".";
+
 	public SyllableBreaker(String cfgFileName) {
 		cfgObject = new ConfigReader(cfgFileName);
 	}
 
-	public static ArrayList<String> breakUp(String _word) {
+	private static ArrayList<String> breakUp(String _word) {
 		ArrayList<String> retval = new ArrayList<>();
 		String word = _word.toLowerCase();
 		String maxCoCo = getMaxConsequentConsonants(word);
@@ -110,9 +115,33 @@ public class SyllableBreaker {
 			ArrayList<String> pass1 = breakUp(item);
 			ArrayList<String> pass2 = revertCase(item, pass1);
 			retval.addAll(pass2);
+
 			if (i < word_array.length - 1) {
-				retval.add("_");
+				retval.add(WORD_SEPARATOR);
 			}
+		}
+		return retval;
+	}
+
+	public static String convertSylArrayToString(Collection<String> array, String separator) {
+		StringBuilder sb = new StringBuilder();
+		if (array != null) {
+			Iterator<String> iter = array.iterator();
+			while (iter.hasNext()) {
+				String atom = iter.next();
+				if (WORD_SEPARATOR.equals(atom)) {
+					int tmp = sb.lastIndexOf(SYL_SEPARATOR);
+					sb.deleteCharAt(tmp);
+					sb.append(" ");
+				} else {
+					sb.append(atom);
+					sb.append(separator);
+				}
+			}
+		}
+		String retval = sb.toString();
+		if (retval.length() > 0) {
+			retval = retval.substring(0, retval.length() - 1);
 		}
 		return retval;
 	}

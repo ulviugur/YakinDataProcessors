@@ -4,14 +4,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -22,13 +17,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.langpack.common.CommandLineArgs;
 import com.langpack.common.FileExporter;
-import com.langpack.common.FileIterator;
 import com.langpack.common.GlobalUtils;
-import com.langpack.common.InvalidRequestException;
-import com.langpack.common.TextFileReader;
-import com.yakin.morphtr.AnalysisWrapper;
-import com.yakin.morphtr.WordModel;
-import com.yakin.morphtr.WordType;
 
 import zemberek.core.io.Files;
 

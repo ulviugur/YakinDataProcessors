@@ -3,7 +3,6 @@ package com.langpack.common;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.TreeSet;
@@ -13,8 +12,7 @@ import java.util.regex.Pattern;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.langpack.dbprocess.LangsLoader;
-import com.sun.tools.sjavac.Log;
+import com.langpack.dbprocess.LangsLoader;	
 
 public class StringProcessor {
 	public static Locale turkishLocale = new Locale.Builder().setLanguage("tr").setRegion("TR").build();
@@ -141,7 +139,7 @@ public class StringProcessor {
 	public static String removeSpecialCharacters(String input) {
 		if (specialCharsFileReader == null) {
 			logger.error("Special characters file is not set; use StringProcessor.setSpecialCharsFile() method");
-			Log.error("Exitting !!");
+			logger.error("Exitting !!");
 			System.exit(-1);
 		}
 

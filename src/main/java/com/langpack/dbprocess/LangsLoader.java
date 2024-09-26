@@ -1,14 +1,13 @@
 package com.langpack.dbprocess;
 
+import java.util.TreeSet;
+
+import org.bson.Document;
+
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
-import org.bson.Document;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.TreeSet;
 
 public class LangsLoader {
     public static TreeSet<String> loadLangs(String server, int serverPort, String dbName, String collName, String lang) {
@@ -42,7 +41,6 @@ public class LangsLoader {
         } finally {
             cursor.close();
         }
-        
         
         // Close the MongoClient
         mongoClient.close();
