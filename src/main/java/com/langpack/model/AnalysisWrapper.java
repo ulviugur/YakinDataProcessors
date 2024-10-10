@@ -118,8 +118,45 @@ public class AnalysisWrapper {
 			return null; // Return null if no match is found
 		}
 	}
+
 	
-	public List<String> searchPhraseInText(String targetPhrase, String quote) {
+// Functions to search word or phrase in text	
+	
+	public List<String> searchInText(String word, String quote) {
+		// Check if the input is a single word or a phrase
+		if (isSingleWord(word)) {
+			return searchWordInText(word, quote);
+		} else {
+			return searchPhraseInText(word, quote);
+		}
+	}
+	
+	private boolean isSingleWord(String word) {
+		return !word.trim().contains(" ");
+	}
+	
+	private List<String> searchWordInText(String targetWord, String quote) {
+		List<String> matchedWords = new ArrayList<>();
+		
+		// Extract the target word's root form
+		List<WordAnalysis> targetAnalysis = morphology.analyzeSentence(targetWord);
+		String targetRoot = extractRootForm(targetAnalysis);
+		
+		String[] words = quote.split(" ");
+		
+		for (String word : words) {
+			List<WordAnalysis> wordAnalysis = morphology.analyzeSentence(word);
+			String wordRoot = extractRootForm(wordAnalysis);
+			
+			if (wordRoot.equals(targetRoot)) {
+				matchedWords.add(word);
+			}
+		}
+		
+		return matchedWords;
+	}
+	
+	private List<String> searchPhraseInText(String targetPhrase, String quote) {
 	    List<String> matchedPhrases = new ArrayList<>();
 	    
 	    // Analyze the target phrase and extract its root form
