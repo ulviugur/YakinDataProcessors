@@ -119,4 +119,92 @@ public class AnalysisWrapper {
 		}
 	}
 
+	
+// Functions to search word or phrase in text	
+	
+	public List<String> searchInText(String word, String quote) {
+		// Check if the input is a single word or a phrase
+		if (isSingleWord(word)) {
+			return searchWordInText(word, quote);
+		} else {
+			return searchPhraseInText(word, quote);
+		}
+	}
+	
+	private boolean isSingleWord(String word) {
+		return !word.trim().contains(" ");
+	}
+	
+	private List<String> searchWordInText(String targetWord, String quote) {
+		List<String> matchedWords = new ArrayList<>();
+		
+		// Extract the target word's root form
+		List<WordAnalysis> targetAnalysis = morphology.analyzeSentence(targetWord);
+		String targetRoot = extractRootForm(targetAnalysis);
+		
+		String[] words = quote.split(" ");
+		
+		for (String word : words) {
+			List<WordAnalysis> wordAnalysis = morphology.analyzeSentence(word);
+			String wordRoot = extractRootForm(wordAnalysis);
+			
+			if (wordRoot.equals(targetRoot)) {
+				matchedWords.add(word);
+			}
+		}
+		
+		return matchedWords;
+	}
+	
+	private List<String> searchPhraseInText(String targetPhrase, String quote) {
+	    List<String> matchedPhrases = new ArrayList<>();
+	    
+	    // Analyze the target phrase and extract its root form
+	    List<WordAnalysis> targetAnalysis = morphology.analyzeSentence(targetPhrase);
+	    String targetRoot = extractRootForm(targetAnalysis);
+	    
+	    // Split the quote into words
+	    String[] words = quote.split(" ");
+	    
+	    // Iterate over the quote to search for the target phrase
+	    for (int i = 0; i < words.length; i++) {
+	        StringBuilder phraseInQuote = new StringBuilder();
+	        int phraseLength = targetAnalysis.size();  // Number of words in the target phrase
+	        
+	        // Extract roots of consecutive words in the quote
+	        for (int j = i; j < i + phraseLength && j < words.length; j++) {
+	            List<WordAnalysis> wordAnalysis = morphology.analyzeSentence(words[j]);
+	            String wordRoot = extractRootForm(wordAnalysis);
+	            phraseInQuote.append(wordRoot).append(" ");
+	        }
+	        
+	        String phraseInQuoteRoot = phraseInQuote.toString().trim();
+	        
+	        // Check if the root form matches the target root form
+	        if (phraseInQuoteRoot.contains(targetRoot)) {
+	            StringBuilder matchedPhrase = new StringBuilder();
+	            for (int j = i; j < i + phraseLength && j < words.length; j++) {
+	                matchedPhrase.append(words[j]).append(" ");
+	            }
+	            matchedPhrases.add(matchedPhrase.toString().trim());
+	            i += phraseLength - 1;  // Skip the words in the found phrase
+	        }
+	    }
+	    
+	    return matchedPhrases;
+	}
+
+	private String extractRootForm(List<WordAnalysis> analysisList) {
+		StringBuilder rootForm = new StringBuilder();
+		for (WordAnalysis analysis : analysisList) {
+			for (SingleAnalysis single : analysis) {
+				String root = single.getLemmas().get(0);
+				rootForm.append(root).append(" ");
+				break;
+			}
+		}
+		
+		return rootForm.toString().trim();
+	}
+
 }
