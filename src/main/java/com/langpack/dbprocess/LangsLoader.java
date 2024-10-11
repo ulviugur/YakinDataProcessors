@@ -4,7 +4,9 @@ import java.util.TreeSet;
 
 import org.bson.Document;
 
-import com.mongodb.MongoClient;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
@@ -12,10 +14,9 @@ import com.mongodb.client.MongoDatabase;
 public class LangsLoader {
     public static TreeSet<String> loadLangs(String server, int serverPort, String dbName, String collName, String lang) {
     	TreeSet<String> retval = new TreeSet<String>();
-    	
-    	
         // Create a new MongoClient instance (adjust host and port if needed)
-        MongoClient mongoClient = new MongoClient(server, serverPort);
+        MongoClient mongoClient = MongoClients.create(String.format("mongodb://%s:%s", server, serverPort));
+        //MongoClient(server, serverPort);
         
         // Connect to the database (replace "yourDatabase" with your database name)
         MongoDatabase database = mongoClient.getDatabase(dbName);

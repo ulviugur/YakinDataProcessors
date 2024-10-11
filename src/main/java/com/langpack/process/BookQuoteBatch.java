@@ -3,6 +3,7 @@ package com.langpack.process;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -14,11 +15,14 @@ import org.apache.logging.log4j.Logger;
 import org.bson.Document;
 
 import com.langpack.common.ConfigReader;
+import com.langpack.common.GlobalUtils;
 import com.langpack.common.TextFileReader;
 import com.langpack.model.AnalysisWrapper;
-import com.langpack.model.BookQuoteData;
+import com.langpack.model.BookQuote;
 import com.langpack.model.WordModel;
-import com.mongodb.MongoClient;
+import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
@@ -31,6 +35,7 @@ public class BookQuoteBatch {
 	private String port = null;
 	private String dbName = null;
 	private String wordCollName = null;
+	private String linkCollName = null;
 	private String bookCollName = null;
 	private String charactersToRemove = null;
 
@@ -44,13 +49,14 @@ public class BookQuoteBatch {
 	private File rootMapsFile = null;
 	private File rootStatsFile = null;
 
-	File quoteLibraryPath = null;
-	File[] quoteFiles = null;
+	File stcFilesDirectory = null;
+	ArrayList<File> stcFiles = null;
 
 	MongoClient mongoClient = null;
 	MongoDatabase database = null;
-	MongoCollection<Document> wordCollection = null;
-	MongoCollection<Document> quoteCollection = null;
+	MongoCollection<Document> wordColl = null;
+	MongoCollection<Document> linkColl = null;
+	MongoCollection<Document> quoteColl = null;
 
 	TreeSet<String> wordSet = new TreeSet<String>();
 	TreeSet<String> phraseSet = new TreeSet<String>();
@@ -60,7 +66,7 @@ public class BookQuoteBatch {
 
 	AnalysisWrapper analyzer = new AnalysisWrapper();
 
-	TreeMap<String, BookQuoteData> quoteMap = new TreeMap<String, BookQuoteData>();
+	TreeMap<String, BookQuote> quoteMap = new TreeMap<String, BookQuote>();
 
 	int quoteMinSentenceLength;
 	int quotePreSentences;
@@ -74,7 +80,8 @@ public class BookQuoteBatch {
 		port = cfgReader.getValue("mongo.Port", "27017");
 		dbName = cfgReader.getValue("mongo.DBName", "test");
 		wordCollName = cfgReader.getValue("mongo.WordCollName", "words");
-		bookCollName = cfgReader.getValue("mongo.QuoteCollName", "bookquote");
+		bookCollName = cfgReader.getValue("mongo.QuoteCollName", "GoldQuotes");
+		linkCollName = cfgReader.getValue("mongo.LinksCollName", "GoldLinks");
 
 		quoteLibraryPathStr = cfgReader.getValue("quoteLibrary.Directory", "");
 
@@ -86,11 +93,10 @@ public class BookQuoteBatch {
 			System.exit(-1);
 		}
 
-		quoteLibraryPath = new File(quoteLibraryPathStr);
-		if (quoteLibraryPath.exists()) {
-			if (quoteLibraryPath.isDirectory()) {
-				log4j.info("Using {} as BookLibrary ..", quoteLibraryPathStr);
-				quoteFiles = quoteLibraryPath.listFiles();
+		stcFilesDirectory = new File(quoteLibraryPathStr);
+		if (stcFilesDirectory.exists()) {
+			if (stcFilesDirectory.isDirectory()) {
+				log4j.info("Using {} as STC Library ..", quoteLibraryPathStr);
 			} else {
 				log4j.error("quoteLibrary.Directory {} is not a directory ! Cannot proceed !", quoteLibraryPathStr);
 				log4j.info("Exitting !!");
@@ -110,11 +116,12 @@ public class BookQuoteBatch {
 		rootMapsFile = new File(rootMapsFilePathStr);
 		rootStatsFile = new File(rootStatsFilePathStr);
 
-		mongoClient = new MongoClient(server, Integer.parseInt(port));
+		mongoClient = MongoClients.create(String.format("mongodb://%s:%s", server, port));
 		database = mongoClient.getDatabase(dbName);
 
-		wordCollection = database.getCollection(wordCollName);
-		quoteCollection = database.getCollection(bookCollName);
+		wordColl = database.getCollection(wordCollName);
+		quoteColl = database.getCollection(bookCollName);
+		linkColl = database.getCollection(linkCollName);
 
 		quoteMinSentenceLength = Integer.parseInt(cfgReader.getValue("quote.MinSentenceLength", "1"));
 		quotePreSentences = Integer.parseInt(cfgReader.getValue("quote.PreSentences", "1"));
@@ -122,8 +129,8 @@ public class BookQuoteBatch {
 
 	}
 
-	public void readAllWordsFromMongo() {
-		MongoCursor<Document> cursor = wordCollection.find().iterator();
+	private void readAllWordsFromMongo() {
+		MongoCursor<Document> cursor = wordColl.find().iterator();
 		try {
 			int count = 1;
 			while (cursor.hasNext()) {
@@ -153,17 +160,31 @@ public class BookQuoteBatch {
 
 		// mongoClient.close();
 	}
-
-	private void useFileForLookups(File searchFile, TreeSet<String> dictWords) {
+	
+	private void useFileForLookups(Document doc, TreeSet<String> dictWords) {
 		String retval = null;
+		
+		String stcFileName = (String) doc.get("stcFile");
+		File searchFile = new File(stcFilesDirectory, stcFileName);
+		
 		TextFileReader reader = new TextFileReader(searchFile);
 		String content = reader.readFile();
 		String[] contentArray = content.split("\\n");
 
+		log4j.info("Searching words in file {}", stcFileName);
+		
 		// Go through each line
 		for (int lineCount = 0; lineCount < contentArray.length; lineCount++) {
-			String currline = contentArray[lineCount];
-			String[] words = currline.split(" ");
+			String line = contentArray[lineCount];
+			String atomline = GlobalUtils.cleanWord(line);
+			
+			log4j.info("Currline : {}", atomline);
+			
+			if (atomline.contains("akılcı")) {
+				log4j.info("");
+			}
+			
+			String[] words = atomline.split(" ");
 
 			if (words.length < quoteMinSentenceLength) {
 				continue;
@@ -179,14 +200,15 @@ public class BookQuoteBatch {
 				// Go through each analysis
 				for (Iterator<WordModel> iterator = result.iterator(); iterator.hasNext();) {
 					WordModel wordModel = (WordModel) iterator.next();
-					String stem = wordModel.getStem();
+					//String stem = wordModel.getStem();
 					String root = wordModel.getRootWord();
+					//String mappedWord = wordModel.getMappedWord();
 					if (root != null) {
 						if (dictWords.contains(root)) {
 							// check if the surrounding sentences are OK
 							String quoteResult = qualifyQuote(contentArray, lineCount, wordCount);
 							if (quoteResult != null) { // if approved insert
-								addtoFound(root, quoteResult, searchFile.getName());
+								addtoFound(root, quoteResult, doc);
 							}
 						}
 						break;
@@ -235,63 +257,56 @@ public class BookQuoteBatch {
 		return retval.toString();
 	}
 
-	private void addtoFound(String _root, String _currline, String _filename) {
-		BookQuoteData data = new BookQuoteData();
+	private void addtoFound(String _root, String _currline, Document doc) {
+		String key = (String) doc.get("key");
+		String stcFileName = (String) doc.get("stcFile");
+		String bookTitle = (String) doc.get("bookTitle");
+		String author = (String) doc.get("author");
+		
+		
+		BookQuote data = new BookQuote();
 		data.setWord(_root);
-		data.setBookTitle(_filename);
 		data.setQuote(_currline);
-		quoteMap.put(_root, data);
+		data.setKey(key);
+		data.setBookTitle(bookTitle);
+		data.setAuthor(author);
 
 		// insert for testing purposes when found
 		insertOneQuoteRecord(data);
 
 		wordSet.remove(_root);
-		log4j.info("Found word {} in file {}", _root, _filename);
+		log4j.info("Found word {} in file {}", _root, stcFileName);
 		log4j.info("Balance => Pending {} vs. Found {}", wordSet.size(), quoteMap.size());
 	}
-
-	/*
-	 * private String lookupWordInFile(File searchFile, String _word) { String
-	 * retval = null; String line = null; TextFileReader reader = new
-	 * TextFileReader(searchFile);
-	 * 
-	 * try { while ((line = reader.readLine()) != null) { String[] words =
-	 * line.split(" "); for (int i = 0; i < words.length; i++) { String word =
-	 * words[i]; List<WordModel> result = analyzer.getWordAnalysis(word); for
-	 * (Iterator<WordModel> iterator = result.iterator(); iterator.hasNext();) {
-	 * WordModel wordModel = (WordModel) iterator.next(); String stem =
-	 * wordModel.getStem(); String root = wordModel.getRootWord(); if (root != null
-	 * && root.equals(_word)) { if (_word.contains("erildi.")) { log4j.info(""); }
-	 * retval = line; log4j.info("Found word {} in file {}", _word,
-	 * searchFile.getName()); break; } } if (retval != null) {break;} } if (retval
-	 * != null) {break;} } } catch (IOException e) { // TODO Auto-generated catch
-	 * block e.printStackTrace(); } return retval; }
-	 */
-
+	
 	public void process() {
 		readAllWordsFromMongo();
-		for (int i = 0; i < quoteFiles.length; i++) {
-			File currentFile = quoteFiles[i];
+		
+		FindIterable<Document> iter = linkColl.find();
+		MongoCursor<Document> cursor = iter.cursor();
+		
+		wordSet = new TreeSet<String>();
+		wordSet.add("akılcı");
+		while (cursor.hasNext()) {
+			Document item = cursor.next();
+			String stcFileName = (String)item.get("stcFile");
+			File currentFile = new File(stcFilesDirectory, stcFileName);
 			log4j.info("Running the file {} for quotes", currentFile.getAbsolutePath());
-			useFileForLookups(currentFile, wordSet);
+			useFileForLookups(item, wordSet);
+			log4j.info("");
 		}
-		/*
-		 * Iterator<String> wordIter = quoteMap.keySet().iterator(); while
-		 * (wordIter.hasNext()) { String wordKey = (String) wordIter.next();
-		 * BookQuoteData data = quoteMap.get(wordKey); insertOneQuoteRecord(data); }
-		 */
-
 	}
 
-	public void insertOneQuoteRecord(BookQuoteData data) {
+	public void insertOneQuoteRecord(BookQuote data) {
 		data.setShowDate(Date.from(Instant.now()));
 		Document record = convertToDocument(data);
-		quoteCollection.insertOne(record);
+		quoteColl.insertOne(record);
+		log4j.info("");
 	}
 
-	public org.bson.Document convertToDocument(BookQuoteData data) {
+	public org.bson.Document convertToDocument(BookQuote data) {
 		org.bson.Document document = new org.bson.Document(); // Create a new BSON Document
-		for (Field field : BookQuoteData.class.getDeclaredFields()) {
+		for (Field field : BookQuote.class.getDeclaredFields()) {
 			field.setAccessible(true); // Allow access to private fields
 			try {
 				Object value = field.get(data);
@@ -308,6 +323,16 @@ public class BookQuoteBatch {
 	public static void main(String[] args) {
 
 		String configFilePath = args[0];
+		
+		AnalysisWrapper analyzer = new AnalysisWrapper();
+		List<WordModel> dictWordCheck = analyzer.getWordAnalysis("açıklık");
+		List<WordModel> bookWordCheck = analyzer.getWordAnalysis("açıklığa");
+		
+		List<WordModel> dictWordCheck2 = analyzer.getWordAnalysis("oturum");
+		List<WordModel> bookWordCheck2 = analyzer.getWordAnalysis("oturumdayken");
+		
+		System.exit(-1);
+		
 		BookQuoteBatch batch = new BookQuoteBatch(configFilePath);
 
 		batch.process();

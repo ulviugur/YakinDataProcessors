@@ -41,7 +41,6 @@ public class ChromeWorker extends BasicClass implements Runnable {
 
 	@Override
 	public void run() {
-		chrome.initializeForTDKHTMLScrape();
 		// TODO Auto-generated method stub
 		startProcess();
 		chrome.closeChromeHeadless();
@@ -55,7 +54,7 @@ public class ChromeWorker extends BasicClass implements Runnable {
 			while (res.next()) {
 				String word = res.getString("WORD");
 				log4j.info(String.format("WORD[%s] WORKER_ID[%s]", word, this.workerID));
-				TDKWordWrapper content = chrome.scrapeTDKContentForWord(word);
+				TDKWordWrapper content = null; //chrome.scrapeTDKContentForWord(word);
 				// log4j.info(content);
 
 				for (TDKChapterItem chItem : content.getChapterItems()) {

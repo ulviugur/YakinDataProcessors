@@ -11,7 +11,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 public class SimpleHTMLTag {
-	public static final Logger logger = LogManager.getLogger("HTMLTag");
+	public static final Logger logger = LogManager.getLogger("SimpleHTMLTag");
 
 	private String source = null;
 
@@ -57,8 +57,6 @@ public class SimpleHTMLTag {
 		Element body = doc.body();
 		Attributes attList = body.childNode(0).attributes();
 		String attrValue = attList.get(attrName);
-		logger.info(attrValue);
-		logger.info("");
 		return attrValue;
 	}
 

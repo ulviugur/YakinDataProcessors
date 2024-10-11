@@ -23,13 +23,13 @@ import com.langpack.common.TextFileReader;
 
 import zemberek.tokenization.TurkishSentenceExtractor;
 
-public class ProcessBooksToSentenceFiles {
+public class ConvertBookTextToSentenceFiles {
 	public static final Logger logger = LogManager.getLogger("ProcessBooksToSentenceFiles");
 
 	File booksDir = null;
 	File sentFilesDir = null;
 	
-	public ProcessBooksToSentenceFiles(String booksDirPath, String sentFilesDirPath) {
+	public ConvertBookTextToSentenceFiles(String booksDirPath, String sentFilesDirPath) {
 		booksDir = new File(booksDirPath);
 		sentFilesDir = new File(sentFilesDirPath);
 	}
@@ -70,7 +70,7 @@ public class ProcessBooksToSentenceFiles {
 		CommandLineArgs argsObject = new CommandLineArgs(args);
 		String booksDirPath = argsObject.get("--booksdir");
 		String sentFilesDirPath = argsObject.get("--sentfilesdir");
-		ProcessBooksToSentenceFiles process = new ProcessBooksToSentenceFiles(booksDirPath, sentFilesDirPath);
+		ConvertBookTextToSentenceFiles process = new ConvertBookTextToSentenceFiles(booksDirPath, sentFilesDirPath);
 		process.runProcess();
 	}
 }

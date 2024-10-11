@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.langpack.common.GlobalUtils;
 //import com.langpack.model.BookQuoteData;
 import com.langpack.model.YakinMeaningItem;
+import com.langpack.scraper.TDKAPIFetcher;
 import com.langpack.structure.SyllableBreaker;
 import com.langpack.tdk.Anlam;
 import com.langpack.tdk.Madde;
@@ -27,7 +28,7 @@ import com.mongodb.client.MongoIterable;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
 
-public class FindWordsWithoutMeaning {
+public class ScrapeMissingWordMeaningsFromTDK {
 	public static final Logger log4j = LogManager.getLogger("FindWordsWithoutMeaning");
 
 	String mongoURL = "mongodb://localhost:27017";
@@ -91,7 +92,7 @@ public class FindWordsWithoutMeaning {
 					for (Iterator<Madde> iterator = items.iterator(); iterator.hasNext();) {
 						Madde madde = (Madde) iterator.next();
 						String chapterName = madde.getMadde();
-						String cleanChapterName = FileBasedBookProcessing.cleanWord(chapterName);
+						String cleanChapterName = FileBasedBookContentProcessing.cleanWord(chapterName);
 						YakinMeaningItem newRecord = new YakinMeaningItem();
 						List<Anlam> meanings = madde.getAnlamlarListe();
 
@@ -172,7 +173,7 @@ public class FindWordsWithoutMeaning {
 					for (Iterator<Madde> iterator = items.iterator(); iterator.hasNext();) {
 						Madde madde = (Madde) iterator.next();
 						String chapterName = madde.getMadde();
-						String cleanChapterName = FileBasedBookProcessing.cleanWord(chapterName);
+						String cleanChapterName = FileBasedBookContentProcessing.cleanWord(chapterName);
 						YakinMeaningItem newRecord = new YakinMeaningItem();
 						List<Anlam> meanings = madde.getAnlamlarListe();
 
@@ -258,7 +259,7 @@ public class FindWordsWithoutMeaning {
 	public static void main(String[] args) {
 		ArrayList<String> sylsArray = SyllableBreaker.break2Syls("Abaza peyniri");
 
-		FindWordsWithoutMeaning process = new FindWordsWithoutMeaning();
+		ScrapeMissingWordMeaningsFromTDK process = new ScrapeMissingWordMeaningsFromTDK();
 		// process.runForAllWords();
 		process.runForAllWordsonMongoCopy();
 	}

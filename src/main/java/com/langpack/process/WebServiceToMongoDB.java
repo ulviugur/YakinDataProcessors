@@ -1,6 +1,6 @@
 package com.langpack.process;
 
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
@@ -45,7 +45,7 @@ public class WebServiceToMongoDB {
 	}
 
 	public WebServiceToMongoDB() {
-		mongoClient = new MongoClient("localhost", 27017);
+		   MongoClient mongoClient = MongoClients.create(String.format("mongodb://%s:%s", "localhost", "27017"));
 		MongoDatabase database = mongoClient.getDatabase(DATABASE_NAME);
 		wordColl = database.getCollection(WORD_COLL_NAME);
 		targetColl = database.getCollection(TARGET_COLL_NAME);

@@ -47,13 +47,12 @@ public class GlobalUtils {
 
 	public static String GMAP_KEY = "AIzaSyDGimeDVxhpBy8YF9OMVmaAT58QCPGaEl0";
 
+	private static final String ALLOWED_CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZçÇğĞıİöÖşŞüÜ ";
+	
 	public static final Logger log4j = LogManager.getLogger("GlobalUtils");
 	public static DecimalFormat COORDS_FORMATTER = new DecimalFormat("##0.000000");
 
-	public static ArrayList<File> checkDirectory(String dirname, ArrayList<String> extlist) { // return all relevant
-																								// files from a
-																								// directory. extlist in
-																								// scope is provided
+	public static ArrayList<File> checkDirectory(String dirname, ArrayList<String> extlist) {
 		ArrayList<File> retval = new ArrayList<>();
 
 		File handleDownloadDir = new File(dirname);
@@ -336,6 +335,26 @@ public class GlobalUtils {
 		return sb.toString();
 	}
 
+	public static String convertArraytoString(String[] array, String separator) {
+		StringBuilder sb = new StringBuilder();
+		if (array != null) {
+			for (int i = 0; i < array.length; i++) {
+				String tmpObject = array[i];
+				String fld = null;
+				if (tmpObject != null) {
+					fld = array[i];
+				} else {
+					fld = "";
+				}
+				sb.append(fld);
+				if (i < array.length - 1) {
+					sb.append(separator);
+				}
+			}
+		}
+		return sb.toString();
+	}
+
 	public static String convertArraytoString(List<Object> array, String separator) {
 		StringBuilder sb = new StringBuilder();
 		if (array != null) {
@@ -380,19 +399,20 @@ public class GlobalUtils {
 
 		return retval;
 	}
-	
+
 	public static String convertSettoStringLines(Set<String> input, String endOflineChars) {
-		if (endOflineChars== null) {
+		if (endOflineChars == null) {
 			endOflineChars = "\r\n";
 		}
 		StringBuilder sb = new StringBuilder();
 		Iterator<String> iter = input.iterator();
-		
+
 		while (iter.hasNext()) {
 			String line = iter.next();
-			sb.append(line); sb.append(endOflineChars);
+			sb.append(line);
+			sb.append(endOflineChars);
 		}
-		
+
 		return sb.toString();
 	}
 
@@ -431,24 +451,24 @@ public class GlobalUtils {
 
 	public static String getFileExtension(String fullName) {
 		int tmpIndex = fullName.lastIndexOf(".");
-		if (tmpIndex <0 ) {
+		if (tmpIndex < 0) {
 			return "";
 		} else {
 			return fullName.substring(tmpIndex + 1);
 		}
 	}
-	
+
 	public static String getFileBase(String fileName) {
 		File tmpFile = new File(fileName);
 		String base = getFileBase(tmpFile);
 		return base;
 	}
-	
+
 	public static String getFileBase(File sourceFile) {
 		String fileExtension = getFileExtension(sourceFile);
 
 		String tmpfileName = sourceFile.getName();
-		String sourceFileBase = tmpfileName.substring(0, tmpfileName.length() - fileExtension.length() -1);
+		String sourceFileBase = tmpfileName.substring(0, tmpfileName.length() - fileExtension.length() - 1);
 
 		return sourceFileBase;
 	}
@@ -824,5 +844,57 @@ public class GlobalUtils {
 		Date currDate = new Date();
 		retval = formatter.format(currDate);
 		return retval;
+	}
+
+	public static org.bson.Document getDocumentFields(org.bson.Document doc, String[] fields) {
+		org.bson.Document subdoc = new org.bson.Document();
+		for (int i = 0; i < fields.length; i++) {
+			String field = fields[i];
+			Object value = doc.get(field);
+			subdoc.append(field, value);
+		}
+
+		return subdoc;
+	}
+
+	public static String prepareFileKey(String key) {
+		if (key == null) {
+			return "NA";
+		} else {
+
+			key = key.trim();
+			key = key.replace(":", "_");
+			key = key.replace("-", "_");
+			key = key.replaceAll("^\\.", "");
+			key = key.replace("*", ".");
+			key = key.replace("’", "");
+			key = key.replace("?", "");
+			key = key.replace("'", "");
+			key = key.replace("\"", "");
+			key = key.replace("\\", "_");
+			key = key.replace("/", "_");
+			key = key.replace("!", "");
+			key = key.replace(",", "");
+			key = key.replace("-", "");
+			key = key.replace(" ", "_");
+			key = key.replace("__", "_");
+			return key;
+		}
+	}
+	
+	public static String cleanWord(String word) {
+		// Use StringBuilder for efficient string manipulation
+		StringBuilder cleanedWord = new StringBuilder();
+
+		// Iterate over each character in the input word
+		for (char ch : word.toCharArray()) {
+			// Append to cleanedWord if the character is in the allowed set
+			if (ALLOWED_CHARACTERS.indexOf(ch) != -1) {
+				cleanedWord.append(ch);
+			}
+		}
+
+		// Return the cleaned word as a string
+		return cleanedWord.toString().trim();
 	}
 }

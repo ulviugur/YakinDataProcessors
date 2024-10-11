@@ -15,14 +15,15 @@ import org.bson.Document;
 import com.langpack.common.ConfigReader;
 import com.langpack.common.FileExporter;
 import com.langpack.common.TextFileReader;
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.langpack.model.AnalysisWrapper;
 import com.langpack.model.WordModel;
 
-public class FileBasedBookProcessing {
+public class FileBasedBookContentProcessing {
 	public static final Logger log4j = LogManager.getLogger("BookQuoteBatch");
 
 	ConfigReader cfgReader = null;
@@ -65,7 +66,7 @@ public class FileBasedBookProcessing {
 	// 2- clean the dirty lists into usable ("clean") words
 	// 3- collect a list of root words which are behind the clean words
 	
-	public FileBasedBookProcessing(String cfgFilePath) {
+	public FileBasedBookContentProcessing(String cfgFilePath) {
 		cfgReader = new ConfigReader(cfgFilePath);
 		server = cfgReader.getValue("mongo.Server", "localhost");
 		port = cfgReader.getValue("mongo.Port", "27017");
@@ -107,7 +108,7 @@ public class FileBasedBookProcessing {
 		rootMapsFile = new File(rootMapsFilePathStr);
 		rootStatsFile = new File(rootStatsFilePathStr);
 
-		mongoClient = new MongoClient(server, Integer.parseInt(port));
+		mongoClient = MongoClients.create(String.format("mongodb://%s:%s", server, port));
 		database = mongoClient.getDatabase(dbName);
 
 		wordCollection = database.getCollection(wordCollName);
@@ -407,7 +408,7 @@ public class FileBasedBookProcessing {
 	public static void main(String[] args) {
 
 		String configFilePath = args[0];
-		FileBasedBookProcessing batch = new FileBasedBookProcessing(configFilePath);
+		FileBasedBookContentProcessing batch = new FileBasedBookContentProcessing(configFilePath);
 
 		batch.process();
 

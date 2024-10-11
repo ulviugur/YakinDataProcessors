@@ -1,4 +1,4 @@
-package com.langpack.process;
+package com.langpack.scraper;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
