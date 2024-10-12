@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.langpack.model.AnalysisWrapper;
+import com.langpack.model.WordModel;
 
 public class MockPhraseInQuoteChecker {
 	
@@ -14,6 +15,25 @@ public class MockPhraseInQuoteChecker {
 	
 	public static void main(String[] args) {
 		AnalysisWrapper analysisWrapper = new AnalysisWrapper();
+		
+		String word = "kitapçıya"; 
+		
+		List<WordModel> wordModels = analysisWrapper.getWordAnalysis(word);
+		
+		for (WordModel wordModel : wordModels) {
+	        log4j.info("Original Word: " + wordModel.getOriginalWord());
+	        log4j.info("Mapped Word: " + wordModel.getMappedWord());
+	        log4j.info("Stem: " + wordModel.getStem());
+	        log4j.info("Root Word: " + wordModel.getRootWord());
+	        log4j.info("Suffix Type: " + wordModel.getSuffixType());
+	        log4j.info("Match Type: " + wordModel.getType());
+	        log4j.info("-----"); 
+	    }
+		
+		/*
+		boolean result = analysisWrapper.hasDerivationalSuffix(word);
+		log4j.info("Result for word '" + word + "': " + result);
+*/
 	/*	
 		String word = "yol almak";
         
@@ -32,7 +52,7 @@ public class MockPhraseInQuoteChecker {
     */    
         
         //String word = "gözünden yaşlar boşanmak";
-		String word = "açık";
+	/*	String word = "açık";
         
         String quote = "Uzun zamandır böyle duygusal anlar yaşamamıştı. "
         		+ "Eski bir arkadaşının hikâyesini dinlerken, içinde biriken duygulara engel olamayıp ağlamaya başladı. "
@@ -47,7 +67,7 @@ public class MockPhraseInQuoteChecker {
         	}
         } else {
         	log4j.info("No match found in the quote.");
-        }
+        }*/
 	}
 
 }

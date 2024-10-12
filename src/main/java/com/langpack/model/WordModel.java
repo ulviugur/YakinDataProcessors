@@ -6,17 +6,19 @@ public class WordModel {
 	private String mappedWord;
 	private String stem;
 	private String rootWord;
+	private SuffixType suffixType;
 	
 	public WordModel() {
         // Default constructor
     }
 
-	public WordModel (WordType type, String originalWord, String mappedWord, String stem, String rootWord) {
+	public WordModel (WordType type, String originalWord, String mappedWord, String stem, String rootWord, SuffixType suffixType) {
 		this.type = type;
 		this.originalWord = originalWord;
 		this.mappedWord = mappedWord;
 		this.stem = stem;
 		this.rootWord = rootWord;
+		this.suffixType = suffixType;
 	}
 	
 	public WordType getType() {
@@ -57,6 +59,16 @@ public class WordModel {
 
 	public void setRootWord(String rootWord) {
 		this.rootWord = rootWord;
+	}
+	
+	
+
+	public SuffixType getSuffixType() {
+		return suffixType;
+	}
+
+	public void setSuffixType(SuffixType suffixType) {
+		this.suffixType = suffixType;
 	}
 
 	@Override
