@@ -15,43 +15,70 @@ import org.apache.logging.log4j.Logger;
 import com.langpack.dbprocess.LangsLoader;	
 
 public class StringProcessor {
+	public static final Logger logger = LogManager.getLogger("StringProcessor");
+	
 	public static Locale turkishLocale = new Locale.Builder().setLanguage("tr").setRegion("TR").build();
 	private static TextFileReader specialCharsFileReader = null;
-	public static final Logger logger = LogManager.getLogger("BooktextImporterFile");
+
 	private static HashSet<String> SPECIAL_CHARS_ARRAY = new HashSet<String>();
 
 	public static String SPECIAL_CHARS_REGEX = null;
 
 	public static String cleanBookString(String input) {
+		
+		//logger.info("Input : {}", input);
 
 		// Replace each period with a period followed by a single new line
 		String step1 = input.replaceAll("\\.", ".\n");
+		
+		//logger.info("step1 : {}", step1);
 
 		// Remove multiple new lines (replace sequences of new lines with a single new
 		// line)
 		String step2 = step1.replaceAll("\\n+", "\n");
+		
+		//logger.info("step2 : {}", step2);
 
 		// Trim leading spaces from each line and manage spaces at the beginning of
 		// lines
 		// Using a regex to match lines with leading spaces and trim them
 		String step3 = step2.replaceAll("(?m)^\\s+", "");
+		//logger.info("step3 : {}", step3);
 
 		// Optionally, remove trailing spaces at the end of each line
 		String step4 = step3.replaceAll("(?m)\\s+$", "");
+		//logger.info("step4 : {}", step4);
 
 		// Remove itemized lists
-		String step5 = step4.replaceAll("\\n.\\n|\\r\\n\\.\\r\\n", "");
+		String step5 = step4.replaceAll("\\n\\.\\n|\\r\\n\\.\\r\\n", "");
+		//logger.info("step5 : {}", step5);
 
 		// Remove multiple spaces
 		String step6 = step5.replaceAll("\\s+", " ");
+		//logger.info("step6 : {}", step6);
 
 		// remove all non.printable characters
 		String regex = "[\\x00-\\x1F\\x7F]";
 		String step7 = step6.replaceAll(regex, " ");
+		//logger.info("step7 : {}", step7);
 
 		String step8 = step7.replaceAll("\\u00AD", "");
-
-		return step8;
+		//logger.info("step8 : {}", step8);
+		
+		String step9 = step8.replaceAll("\\s*,", ", ");
+		//logger.info("step9 : {}", step9);
+		
+		String step10 = step9.replaceAll("“\\s+", "“");
+		//logger.info("step10 : {}", step10);
+		
+		String step11 = step10.replaceAll("\\s+”", "”");
+		//logger.info("step11 : {}", step11);
+		
+		String step12 = step11.replaceAll("(?<=[a-zçğıöşü])(?=[A-ZÇĞİÖŞÜ])", " ").trim();
+		
+		String step13 = step12.replaceAll("\\s+", " ");
+				
+		return step13;
 	}
 
 	public static HashSet<String> convertToKeywords(String input) {
@@ -120,26 +147,26 @@ public class StringProcessor {
 			sb.append(line);
 
 			// test character in regex
-			logger.info("[{}] Testing {} :", count, newChar);
+			//logger.info("[{}] Testing {} :", count, newChar);
 			String testRegex = sb.toString().concat("]");
 			"test".replaceAll(testRegex, "");
-			logger.info("Tested :" + newChar);
+			//logger.info("Tested :" + newChar);
 			count++;
 		}
-		logger.info("Added {} lines of special characters to be stripped from text.", lines.length);
+		//logger.info("Added {} lines of special characters to be stripped from text.", lines.length);
 		sb.append("]");
 
 		SPECIAL_CHARS_REGEX = sb.toString();
 
-		logger.info("Regex for special characters : {}", SPECIAL_CHARS_REGEX);
+		//logger.info("Regex for special characters : {}", SPECIAL_CHARS_REGEX);
 
 	}
 
 	// When books are translated into text strings, process them to clean
 	public static String removeSpecialCharacters(String input) {
 		if (specialCharsFileReader == null) {
-			logger.error("Special characters file is not set; use StringProcessor.setSpecialCharsFile() method");
-			logger.error("Exitting !!");
+			//logger.error("Special characters file is not set; use StringProcessor.setSpecialCharsFile() method");
+			//logger.error("Exitting !!");
 			System.exit(-1);
 		}
 
@@ -180,12 +207,12 @@ public class StringProcessor {
 			while ((line = reader.readLine()) != null) {
 				String newLine = line.replaceAll(StringProcessor.SPECIAL_CHARS_REGEX, "");
 				if ("".equals(newLine)) {
-					logger.info("Skipping line {} as it lead to empty string ..", lineCount);
+					//logger.info("Skipping line {} as it lead to empty string ..", lineCount);
 				} else {
 					if (!langs.contains(newLine)) {
 						words.add(newLine);
 					} else {
-						logger.info("Skipping line {} as it is an English word {} ..", lineCount, newLine);
+						//logger.info("Skipping line {} as it is an English word {} ..", lineCount, newLine);
 					}
 				}
 				lineCount++;
@@ -194,13 +221,9 @@ public class StringProcessor {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
 		for (String word : words) {
 			exporter.writeLineToFile(word);
 		}
-
 		exporter.closeExportFile();
-
 	}
-
 }

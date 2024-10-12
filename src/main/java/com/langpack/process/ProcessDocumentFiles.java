@@ -1,17 +1,22 @@
 package com.langpack.process;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.langpack.common.CommandLineArgs;
+import com.langpack.common.ConfigReader;
 import com.langpack.common.EPUBContentReader;
 import com.langpack.common.FileExporter;
 import com.langpack.common.FileIterator;
@@ -19,46 +24,95 @@ import com.langpack.common.FileLedger;
 import com.langpack.common.GlobalUtils;
 import com.langpack.common.InvalidRequestException;
 import com.langpack.common.PDFContentReader;
+import com.langpack.common.StringProcessor;
+import com.langpack.common.TextFileReader;
 
 public class ProcessDocumentFiles {
-	public static final Logger logger = LogManager.getLogger("ProcessPDFFiles");
+	public static final Logger log4j = LogManager.getLogger("ProcessDocumentFiles");
 
-	public void processDirectory(File sourceDir, String targetDirPath, List<String> extensionsList,
-			String ledgerFilePath) {
+	String sourceDirPath = null;
+	String targetDirPath = null;
+	String extensionStr = null;
+	String idFilePath = null;
+	
+	String[] extensionsArray = null;
+	List<String> extensionsList = null;
+	String ledgerFilePath = null;
+	FileLedger ledger = null;
+	ConfigReader cfg = null;
 
-		FileIterator sourceIter = null;
-		try {
-			sourceIter = new FileIterator(sourceDir);
-		} catch (InvalidRequestException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			logger.error("Source directory cannot be initialized under {}", sourceDir.getAbsolutePath());
+	public ProcessDocumentFiles(String cfgReaderPath) {
+
+		cfg = new ConfigReader(cfgReaderPath);
+
+		sourceDirPath = cfg.getValue("inputdir");
+		targetDirPath = cfg.getValue("outputdir");
+		extensionStr = cfg.getValue("extensions");
+
+		extensionsArray = extensionStr.split(" ");
+		extensionsList = Arrays.asList(extensionsArray);
+
+		ledgerFilePath = cfg.getValue("ledgerfile");
+		idFilePath = cfg.getValue("idfile");
+		
+		if (ledgerFilePath == null || "".equals(ledgerFilePath.trim())) {
+			log4j.info("No ledger parameter set, exitting ..");
+			System.exit(-1);
 		}
 
-		int totalCount = 0;
-
-		File currSourceFile = sourceIter.getCurrFile();
-
-		FileLedger ledger = null;
 		try {
 			ledger = new FileLedger(ledgerFilePath);
 			ledger.loadLedger();
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			logger.error("Ledgerfile cannot be opened : {}, exitting", ledgerFilePath);
+			log4j.error("Ledgerfile cannot be opened : {}, exitting", ledgerFilePath);
 			System.exit(-1);
 		}
 
+	}
+
+	public void process() {
+		File sourceDir = new File(sourceDirPath);
+
+		if (sourceDir.exists()) {
+			File[] dirs = sourceDir.listFiles();
+
+			for (int i = 0; i < dirs.length; i++) {
+				File dir = dirs[i];
+				if (!dir.isDirectory()) {
+					log4j.warn("{} is not a directory, expect a directory to process, skipping ..",
+							dir.getAbsolutePath());
+				} else {
+					processDirectory(dir, targetDirPath, extensionsList);
+				}
+			}
+		} else {
+			log4j.info("Inputdir {} does not exist", sourceDir.getAbsolutePath());
+		}
+	}
+
+	public void processDirectory(File sourceDir, String targetDirPath, List<String> extensionsList) {
+		FileIterator sourceIter = null;
+		try {
+			sourceIter = new FileIterator(sourceDir);
+		} catch (InvalidRequestException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			log4j.error("Source directory cannot be initialized under {}", sourceDir.getAbsolutePath());
+		}
+
+		int totalCount = 0;
+		File currSourceFile = sourceIter.getCurrFile();
 		try {
 			while (currSourceFile != null) {
-				logger.info("[{}] Current source file: \"{}\"", totalCount, currSourceFile.getAbsolutePath());
+				log4j.info("[{}] Current source file: \"{}\"", totalCount, currSourceFile.getAbsolutePath());
 
 				String ext = GlobalUtils.getFileExtension(currSourceFile);
 				if (extensionsList.contains(ext)) {
 
 					if (ledger.isInledger(currSourceFile.getAbsolutePath())) {
-						logger.info("The file exists in ledger, skipping {} ..", currSourceFile.getAbsolutePath());
+						log4j.info("The file exists in ledger, skipping {} ..", currSourceFile.getAbsolutePath());
 					} else {
 
 						String baseFileName = GlobalUtils.getFileBase(currSourceFile);
@@ -74,15 +128,16 @@ public class ProcessDocumentFiles {
 
 							String rawContent = instance.readContent();
 							if (rawContent == null || rawContent.length() < 100) {
-								logger.warn("[{}] Skipping file: \"{}\" as it is empty or minimally readable !",
+								log4j.warn("[{}] Skipping file: \"{}\" as it is empty or minimally readable !",
 										totalCount, currSourceFile.getAbsolutePath());
 								currSourceFile = sourceIter.moveToNextTarget();
 								totalCount++;
 							}
+
 							content = instance.analyzeTextFollowingDashes(rawContent);
 
 							if (content == null || content.length() < 100) {
-								logger.warn("[{}] Skipping file: \"{}\" as it is empty or minimally readable !",
+								log4j.warn("[{}] Skipping file: \"{}\" as it is empty or minimally readable !",
 										totalCount, currSourceFile.getAbsolutePath());
 								currSourceFile = sourceIter.moveToNextTarget();
 								totalCount++;
@@ -97,20 +152,15 @@ public class ProcessDocumentFiles {
 								}
 								fExporter.writeStringToFile(content);
 								fExporter.closeExportFile();
-								logger.info("Content of {} bytes are written to file {}", content.length(),
+								log4j.info("Content of {} bytes are written to file {}", content.length(),
 										exportFile.getAbsoluteFile());
 							}
 
 						} else if (currSourceFile.getAbsolutePath().toLowerCase().contains("epub")) {
-							EPUBContentReader instance = new EPUBContentReader();
-							try {
-								content = instance.extractTextFromEpub(currSourceFile);
-							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
+
+							content = getEPUBContent(currSourceFile);
 							if (content == null || content.length() == 0) {
-								logger.warn("[{}] Skipping file: \"{}\" as it is empty !", totalCount,
+								log4j.warn("[{}] Skipping file: \"{}\" as it is empty !", totalCount,
 										currSourceFile.getAbsolutePath());
 							} else {
 								FileExporter fExporter = null;
@@ -122,13 +172,13 @@ public class ProcessDocumentFiles {
 								}
 								fExporter.writeStringToFile(content);
 								fExporter.closeExportFile();
-								logger.info("Content of {} bytes are written to file {}", content.length(),
+								log4j.info("Content of {} bytes are written to file {}", content.length(),
 										exportFile.getAbsoluteFile());
 							}
 						}
 					}
 				} else {
-					logger.info("[{}] File skipped due to untracked extension : \"{}\"", totalCount,
+					log4j.debug("[{}] File skipped due to untracked extension : \"{}\"", totalCount,
 							currSourceFile.getAbsolutePath());
 				}
 				ledger.addtoLedger(currSourceFile.getAbsolutePath());
@@ -139,52 +189,24 @@ public class ProcessDocumentFiles {
 		} catch (InvalidRequestException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			logger.error("Exitting");
+			log4j.error("Exitting");
 			System.exit(-1);
 		} catch (Exception ex) {
 			ledger.closeLedger();
 		}
 	}
 
-	public static void main(String[] args) {
-
-		CommandLineArgs argsObject = new CommandLineArgs(args);
-
-		String sourceDirPath = argsObject.get("--inputdir");
-		// sourceDirPath = "C:\\BooksRepo\\SORTED\\A\\";
-		// sourceDirPath = "C:\\BooksRepo\\SORTED\\tmp\\";
-
-		String targetDirPath = argsObject.get("--outputdir");
-		// targetDirPath = "C:\\BooksRepo\\Text\\A\\";
-
-		String[] extensionsArray = argsObject.get("--extensions").split(" ");
-		List<String> extensionsList = Arrays.asList(extensionsArray);
-
-		String ledgerFilePath = argsObject.get("--ledger");
-		if (ledgerFilePath == null || "".equals(ledgerFilePath.trim())) {
-			logger.info("No ledger parameter set, exitting ..");
-			System.exit(-1);
+	private String getEPUBContent(File currSourceFile) {
+		String retval = null;
+		EPUBContentReader instance = new EPUBContentReader();
+		try {
+			retval = instance.extractTextFromEpub(currSourceFile);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-
-		File sourceDir = new File(sourceDirPath);
-
-		ProcessDocumentFiles process = new ProcessDocumentFiles();
-
-		if (sourceDir.exists()) {
-			File[] dirs = sourceDir.listFiles();
-
-			for (int i = 0; i < dirs.length; i++) {
-				File dir = dirs[i];
-				if (!dir.isDirectory()) {
-					logger.warn("{} is not a directory, expect a directory to process, skipping ..",
-							dir.getAbsolutePath());
-				} else {
-					process.processDirectory(dir, targetDirPath, extensionsList, ledgerFilePath);
-				}
-			}
-		} else {
-			logger.info("Inputdir {} does not exist", sourceDir.getAbsolutePath());
-		}
+		// System.out.print(retval);
+		return retval;
 	}
 
 	public static String cleanBaseFilename(String tmpFilename) {
@@ -200,7 +222,6 @@ public class ProcessDocumentFiles {
 		}
 
 		String updatedStr = sb.toString();
-
 		Pattern pattern = Pattern.compile("\\(([^\\(\\)]+) \\[(.+)\\]\\)");
 
 		String newFileName = updatedStr;
@@ -224,6 +245,67 @@ public class ProcessDocumentFiles {
 		return strippedFileName3;
 	}
 
+	public void addPrefixtoFiles() {
+		File idFile = new File(idFilePath);
+		TextFileReader reader = new TextFileReader(idFile);
+		boolean opened = reader.openFile();
+		String line = null;
+		TreeMap<String, String> idMap = new TreeMap<String, String>();
+		int maxid = 0;
+		try {
+			while ((line = reader.readLine()) != null) {
+				String[] tokens = line.split("\t");
+				String id = tokens[1];
+				int intid = Integer.parseInt(id);
+				maxid = Math.max(maxid, intid);
+				String filename = tokens[2];
+				idMap.put(filename, id);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		log4j.info("Loaded {} ids for files", idMap.size());
+
+		File targetdir = new File(targetDirPath);
+
+		File[] fileList = targetdir.listFiles();
+		Integer nextid = maxid + 1;
+		int count = 0;
+		for (int i = 0; i < fileList.length; i++) {
+			log4j.info("index : " + i);
+			File currFile = fileList[i];
+			String filename = currFile.getName();
+
+			Pattern pattern = Pattern.compile("\\d{5}");
+			Matcher matcher = pattern.matcher(filename);
+
+			// Find all matches
+			boolean res = matcher.find();
+			if (res) {
+				String currid = matcher.group();
+			} else {
+				String newid = idMap.get(filename);
+				String newFilename = null;
+				if (newid == null) {
+					newid = nextid.toString();
+					nextid++;
+				} 
+				
+				newFilename = newid + "_" + filename;
+				log4j.info("File {}", newFilename);
+				
+				File newFile = new File(currFile.getParentFile(), newFilename);
+				
+				log4j.info("Currfile : {}, NewFile : {}", currFile, newFile);
+				currFile.renameTo(newFile);
+				
+				count++;
+			}
+
+		}		
+	}
+
 	private static boolean areKeywordsMatching(String part1, String part2) {
 		// Split the names into individual words by spaces or commas
 		String[] name1Parts = part1.split("\\s*,\\s*|\\s+");
@@ -236,4 +318,12 @@ public class ProcessDocumentFiles {
 		// Check if the sorted arrays are equal
 		return Arrays.equals(name1Parts, name2Parts);
 	}
+
+	public static void main(String[] args) {
+		ProcessDocumentFiles instance = new ProcessDocumentFiles(args[0]);
+
+		instance.process();
+		//instance.addPrefixtoFiles(); // if the files do not have a d{5} prefix. Should be added to the end of the process to rename txt files.
+	}
+
 }

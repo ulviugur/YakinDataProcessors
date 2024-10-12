@@ -16,6 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.langpack.common.CommandLineArgs;
+import com.langpack.common.ConfigReader;
 import com.langpack.common.FileExporter;
 import com.langpack.common.GlobalUtils;
 
@@ -23,7 +24,11 @@ import zemberek.core.io.Files;
 
 public class FilterBooksAndGenerateIndexes {
 	public static final Logger logger = LogManager.getLogger("FilterBooksAndGenerateIndexes");
-
+//	
+//	String booksDirPath = null;
+//	String listDirPath = null;
+//	String uqDirPath = null;
+	
 	File booksDir = null;
 	File listsDir = null;
 
@@ -44,10 +49,18 @@ public class FilterBooksAndGenerateIndexes {
 
 	TreeMap<String, TreeSet<String>> nameMap = new TreeMap<String, TreeSet<String>>();
 
-	public FilterBooksAndGenerateIndexes(String dbFileStr, String listdirStr, String uqDirStr) {
-		booksDir = new File(dbFileStr);
-		listsDir = new File(listdirStr);
-		uqDir = new File(uqDirStr);
+	ConfigReader cfg;
+	
+	public FilterBooksAndGenerateIndexes(String cfgFile) {
+		cfg = new ConfigReader(cfgFile);
+		
+		String booksDirPath = cfg.getValue("booksdir");
+		String listDirPath = cfg.getValue("listdir");
+		String uqDirPath = cfg.getValue("uqdir");
+		
+		booksDir = new File(booksDirPath);
+		listsDir = new File(listDirPath);
+		uqDir = new File(uqDirPath);
 
 		File[] filesList = booksDir.listFiles();
 
@@ -189,11 +202,8 @@ public class FilterBooksAndGenerateIndexes {
 	}
 
 	public static void main(String[] args) {
-		CommandLineArgs argsObject = new CommandLineArgs(args);
-		String booksDirPath = argsObject.get("--booksdir");
-		String listDirPath = argsObject.get("--listdir");
-		String uqDirPath = argsObject.get("--uqdir");
-		FilterBooksAndGenerateIndexes process = new FilterBooksAndGenerateIndexes(booksDirPath, listDirPath, uqDirPath);
+
+		FilterBooksAndGenerateIndexes process = new FilterBooksAndGenerateIndexes(args[0]);
 		process.runProcess();
 	}
 }

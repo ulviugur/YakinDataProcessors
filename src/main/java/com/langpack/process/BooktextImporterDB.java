@@ -21,8 +21,11 @@ import com.langpack.common.InvalidRequestException;
 import com.langpack.common.StringProcessor;
 import com.langpack.common.TextFileReader;
 
+// Uses a list of all book text in a specific directory
+// Creates a (unique ?) list of all words in the database (oracle !)
+
 public class BooktextImporterDB {
-	public static final Logger logger = LogManager.getLogger("ImportDocumentFiles");
+	public static final Logger logger = LogManager.getLogger("BooktextImporterDB");
 
 	File sourceDir = null;
 	String targetDBConn = null;
