@@ -14,6 +14,7 @@ import zemberek.morphology.analysis.SingleAnalysis;
 import zemberek.morphology.analysis.WordAnalysis;
 import zemberek.morphology.generator.WordGenerator;
 import zemberek.morphology.lexicon.RootLexicon;
+import zemberek.morphology.morphotactics.Morpheme;
 import zemberek.normalization.TurkishSpellChecker;
 
 import org.apache.logging.log4j.LogManager;
@@ -43,66 +44,74 @@ public class AnalysisWrapper {
 
 		List<WordModel> results = new ArrayList<>();
 		Set<String> suggestedWords = new HashSet<>(); // To store unique suggestions
-
+		
+		// Check if the word has a derivational suffix
+		boolean hasDerivSuffix = hasDerivationalSuffix(word);
+		logger.info("Word \"" + word + "\" has derivational suffix: " + hasDerivSuffix);
+		
+		SuffixType suffixType = hasDerivSuffix ? SuffixType.DERIVATIONAL : SuffixType.NON_DERIVED;
+		List<SingleAnalysis> tempResults = morphology.analyze(word).getAnalysisResults();
+		String wordToAnalyze = hasDerivSuffix ? word : extractRootWord(tempResults.get(0));
+		logger.info("Word to analyze: " + wordToAnalyze);
+		
 		// Step 1: Check if the word exists in the dictionary
-		WordAnalysis analysis = morphology.analyze(word);
-		if (analysis.analysisCount() > 0) {
-			for (SingleAnalysis singleAnalysis : analysis.getAnalysisResults()) {
-				String rootWord = extractRootWord(singleAnalysis);
-				results.add(
-						new WordModel(WordType.EXACT_MATCH, word, word, singleAnalysis.getStems().get(0), rootWord));
-				suggestedWords.add(rootWord);
-			}
-			return results; // Return all correct word analyses
-		}
+		WordAnalysis analysis = morphology.analyze(wordToAnalyze);
+	    if (analysis.analysisCount() > 0) {
+	        for (SingleAnalysis singleAnalysis : analysis.getAnalysisResults()) {
+	            logger.info("Analyzing word: " + singleAnalysis.surfaceForm());
+	            String rootWord = hasDerivSuffix ? wordToAnalyze : extractRootWord(singleAnalysis);
+
+	            results.add(new WordModel(WordType.EXACT_MATCH, word, wordToAnalyze, singleAnalysis.getStems().get(0), rootWord, suffixType));
+	            suggestedWords.add(rootWord);
+	        }
+	        return results; // Return all correct word analyses
+	    }
 
 		// Step 2: Perform informal analysis to find a formal equivalent
-		List<SingleAnalysis> informalAnalysis = morphology.analyzeAndDisambiguate(word).bestAnalysis();
-		if (!informalAnalysis.isEmpty()) {
-			for (SingleAnalysis bestInformalAnalysis : informalAnalysis) {
-				WordGenerator.Result formalResult = informalConverter.convert(bestInformalAnalysis.surfaceForm(),
-						bestInformalAnalysis);
-				String formalForm = formalResult.surface;
+	    List<SingleAnalysis> informalAnalysis = morphology.analyzeAndDisambiguate(wordToAnalyze).bestAnalysis();
+	    if (!informalAnalysis.isEmpty()) {
+	        for (SingleAnalysis bestInformalAnalysis : informalAnalysis) {
+	            WordGenerator.Result formalResult = informalConverter.convert(bestInformalAnalysis.surfaceForm(), bestInformalAnalysis);
+	            String formalForm = formalResult.surface;
 
-				// Check if the formalized word exists in the dictionary
-				WordAnalysis formalAnalysis = morphology.analyze(formalForm);
-				if (formalAnalysis.analysisCount() > 0) {
-					for (SingleAnalysis bestFormalAnalysis : formalAnalysis.getAnalysisResults()) {
-						String rootWord = extractRootWord(bestFormalAnalysis);
-						results.add(new WordModel(WordType.POSSIBLE_MATCH, word, formalForm,
-								bestFormalAnalysis.getStems().get(0), rootWord));
-						suggestedWords.add(rootWord);
-					}
-				}
-			}
-			if (!results.isEmpty()) {
-				return results; // Return all possible matches from informal analysis
-			}
-		}
+	            WordAnalysis formalAnalysis = morphology.analyze(formalForm);
+	            if (formalAnalysis.analysisCount() > 0) {
+	                for (SingleAnalysis bestFormalAnalysis : formalAnalysis.getAnalysisResults()) {
+	                    String rootWord = hasDerivSuffix ? wordToAnalyze : extractRootWord(bestFormalAnalysis);
+
+	                    results.add(new WordModel(WordType.POSSIBLE_MATCH, word, formalForm, bestFormalAnalysis.getStems().get(0), rootWord, suffixType));
+	                    suggestedWords.add(rootWord);
+	                }
+	            }
+	        }
+	        if (!results.isEmpty()) {
+	            return results; // Return all possible matches from informal analysis
+	        }
+	    }
 
 		// Step 3: Perform spell checking if informal analysis didn't find a match
-		List<String> suggestions = spellChecker.suggestForWord(word);
-		if (!suggestions.isEmpty()) {
-			for (String suggestion : suggestions) {
-				WordAnalysis correctedAnalysis = morphology.analyze(suggestion);
-				if (correctedAnalysis.analysisCount() > 0) {
-					for (SingleAnalysis bestCorrectedAnalysis : correctedAnalysis.getAnalysisResults()) {
-						String rootWord = extractRootWord(bestCorrectedAnalysis);
-						results.add(new WordModel(WordType.POSSIBLE_MATCH, word, suggestion,
-								bestCorrectedAnalysis.getStems().get(0), rootWord));
-						suggestedWords.add(rootWord);
-					}
-				}
-			}
-			if (!results.isEmpty()) {
-				return results; // Return all possible matches from spell checker
-			}
-		}
+	    List<String> suggestions = spellChecker.suggestForWord(wordToAnalyze);
+	    if (!suggestions.isEmpty()) {
+	        for (String suggestion : suggestions) {
+	            WordAnalysis correctedAnalysis = morphology.analyze(suggestion);
+	            if (correctedAnalysis.analysisCount() > 0) {
+	                for (SingleAnalysis bestCorrectedAnalysis : correctedAnalysis.getAnalysisResults()) {
+	                    String rootWord = hasDerivSuffix ? wordToAnalyze : extractRootWord(bestCorrectedAnalysis);
 
+	                    results.add(new WordModel(WordType.POSSIBLE_MATCH, word, suggestion, bestCorrectedAnalysis.getStems().get(0), rootWord, suffixType));
+	                    suggestedWords.add(rootWord);
+	                }
+	            }
+	        }
+	        if (!results.isEmpty()) {
+	            return results; // Return all possible matches from spell checker
+	        }
+	    }
+	    
 		// Step 4: If neither the original nor the normalized versions are found,
 		// classify as UNRECOGNIZED_WORD
-		results.add(new WordModel(WordType.UNRECOGNIZED_WORD, word, null, null, null));
-		return results;
+	    results.add(new WordModel(WordType.UNRECOGNIZED_WORD, word, null, null, null, null));
+	    return results;
 	}
 
 	private String extractRootWord(SingleAnalysis analysis) {
@@ -112,13 +121,65 @@ public class AnalysisWrapper {
 		Matcher matcher = pattern.matcher(analysisString);
 
 		if (matcher.find()) {
-			return matcher.group(1); // Returns the root word, e.g., 'okumak'
+			String matchedGroup0 = matcher.group(0);
+			String matchedGroup1 = matcher.group(1); // analysisString brings the root of the word as the first token
+			
+			
+			return matchedGroup1; // Returns the root word, e.g., 'okumak'
 		} else {
 			//logger.warn("Could not extract root word from analysis: {}", analysisString);
 			return null; // Return null if no match is found
 		}
 	}
 
+	public boolean hasDerivationalSuffix(String word) {
+		// Perform morphological analysis
+		WordAnalysis analysis = morphology.analyze(word);
+		if (analysis.analysisCount() == 0) {
+			logger.info("No analysis found for word: " + word);
+			return false; // If the word is not found in the lexicon
+		}
+		
+		for (SingleAnalysis singleAnalysis : analysis.getAnalysisResults()) {
+			logger.info("Analyzing word breakdown: " + singleAnalysis.formatLong());
+			
+			// Extract descriptions (e.g., Adj, Noun, Ness, A3sg) for the word
+			List<String> descriptions = extractDescriptions(singleAnalysis);
+			logger.info("Descriptions extracted: " + descriptions);
+			
+			// Ignore the first description, which is the root
+			if (descriptions.size() <= 1) {
+				logger.info("No suffixes found for word: " + word);
+				continue; // No suffixes to check
+			}
+			
+			List<String> suffixDescriptions = descriptions.subList(1, descriptions.size());
+			logger.info("Suffix descriptions to check: " + suffixDescriptions);
+			
+			// List of derivational suffixes TODO: delete this and use database
+			Set<String> derivationalSuffixes = Set.of("Ness", "With", "Without");
+			
+			// Check if any suffix matches the derivational suffix list
+			for (String description : suffixDescriptions) {
+				if (derivationalSuffixes.contains(description)) {
+					logger.info("Derivational suffix found: " + description);
+					return true; // Word has derivational suffix
+				}
+			}
+		}
+		logger.info("No derivational suffix found for word: " + word);
+		return false; // No derivational suffix found
+	}
+	
+	private List<String> extractDescriptions(SingleAnalysis analysis) {
+		List<String> descriptions = new ArrayList<>();
+		
+		for (Morpheme morpheme : analysis.getMorphemes()) {
+			String morhphemeDescription = morpheme.id.toString();
+			descriptions.add(morhphemeDescription);
+		}
+		return descriptions;
+	}
 	
 // Functions to search word or phrase in text	
 	
