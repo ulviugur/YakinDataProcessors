@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import zemberek.morphology.TurkishMorphology;
 import zemberek.morphology.analysis.InformalAnalysisConverter;
 import zemberek.morphology.analysis.SingleAnalysis;
+import zemberek.morphology.analysis.SingleAnalysis.MorphemeData;
 import zemberek.morphology.analysis.WordAnalysis;
 import zemberek.morphology.generator.WordGenerator;
 import zemberek.morphology.lexicon.RootLexicon;
@@ -20,6 +21,8 @@ import zemberek.normalization.TurkishSpellChecker;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.langpack.model.suffix.SuffixType;
+
 public class AnalysisWrapper {
 
 	public static final Logger logger = LogManager.getLogger("AnalysisWrapper");
@@ -27,6 +30,9 @@ public class AnalysisWrapper {
 	TurkishMorphology morphology = null;
 	InformalAnalysisConverter informalConverter = null;
 	TurkishSpellChecker spellChecker;
+	
+	// List of derivational suffixes TODO: delete this and use database
+	Set<String> derivationalSuffixes = Set.of("Inf2", "Ness", "Caus", "Pass", "Become", "With", "Agt", "Acquire", "Without", "Inf3", "Hastily", "AorPart", "Opt", "Equ", "PresPart", "Ly", "Related", "Ins", "JustLike", "PastPart", "Cond", "Recip", "Dim", "NarrPart", "AfterDoingSo", "FeelLike", "Desr", "FutPart", "NotState", "Rel", "ActOf", "Almost", "Reflex", "EverSince", "Stay", "Repeat", "Adamantly", "Start");
 
 	public AnalysisWrapper() {
 
@@ -47,18 +53,30 @@ public class AnalysisWrapper {
 		
 		// Check if the word has a derivational suffix
 		boolean hasDerivSuffix = hasDerivationalSuffix(word);
-		logger.info("Word \"" + word + "\" has derivational suffix: " + hasDerivSuffix);
+		logger.trace("Word \"" + word + "\" has derivational suffix: " + hasDerivSuffix);
 		
-		SuffixType suffixType = hasDerivSuffix ? SuffixType.DERIVATIONAL : SuffixType.NON_DERIVED;
+		SuffixType suffixType = hasDerivSuffix ? SuffixType.DERIVATIONAL : SuffixType.INFLEXIONAL;
 		List<SingleAnalysis> tempResults = morphology.analyze(word).getAnalysisResults();
 		String wordToAnalyze = hasDerivSuffix ? word : extractRootWord(tempResults.get(0));
 		logger.info("Word to analyze: " + wordToAnalyze);
 		
 		// Step 1: Check if the word exists in the dictionary
 		WordAnalysis analysis = morphology.analyze(wordToAnalyze);
-	    if (analysis.analysisCount() > 0) {
+//		List<SingleAnalysis> aList = analysis.getAnalysisResults();
+//		SingleAnalysis item0 = aList.get(0);
+//		List<MorphemeData> mData0 = item0.getMorphemeDataList();
+//		List<Morpheme> morph0 = item0.getMorphemes();
+//		
+//		SingleAnalysis item1 = aList.get(1);
+//		List<MorphemeData> mData1 = item1.getMorphemeDataList();
+//		List<Morpheme> morph1 = item1.getMorphemes();
+//		
+		if (analysis.analysisCount() > 0) {
 	        for (SingleAnalysis singleAnalysis : analysis.getAnalysisResults()) {
-	            logger.info("Analyzing word: " + singleAnalysis.surfaceForm());
+	        	List<Morpheme> morph = singleAnalysis.getMorphemes();
+	        	List<MorphemeData> morphData = singleAnalysis.getMorphemeDataList();
+	        	
+	            logger.trace("Analyzing word: " + singleAnalysis.surfaceForm());
 	            String rootWord = hasDerivSuffix ? wordToAnalyze : extractRootWord(singleAnalysis);
 
 	            results.add(new WordModel(WordType.EXACT_MATCH, word, wordToAnalyze, singleAnalysis.getStems().get(0), rootWord, suffixType));
@@ -136,16 +154,16 @@ public class AnalysisWrapper {
 		// Perform morphological analysis
 		WordAnalysis analysis = morphology.analyze(word);
 		if (analysis.analysisCount() == 0) {
-			logger.info("No analysis found for word: " + word);
+			logger.trace("No analysis found for word: " + word);
 			return false; // If the word is not found in the lexicon
 		}
 		
 		for (SingleAnalysis singleAnalysis : analysis.getAnalysisResults()) {
-			logger.info("Analyzing word breakdown: " + singleAnalysis.formatLong());
+			logger.trace("Analyzing word breakdown: " + singleAnalysis.formatLong());
 			
 			// Extract descriptions (e.g., Adj, Noun, Ness, A3sg) for the word
 			List<String> descriptions = extractDescriptions(singleAnalysis);
-			logger.info("Descriptions extracted: " + descriptions);
+			logger.trace("Descriptions extracted: " + descriptions);
 			
 			// Ignore the first description, which is the root
 			if (descriptions.size() <= 1) {
@@ -154,20 +172,17 @@ public class AnalysisWrapper {
 			}
 			
 			List<String> suffixDescriptions = descriptions.subList(1, descriptions.size());
-			logger.info("Suffix descriptions to check: " + suffixDescriptions);
-			
-			// List of derivational suffixes TODO: delete this and use database
-			Set<String> derivationalSuffixes = Set.of("Ness", "With", "Without");
+			logger.trace("Suffix descriptions to check: " + suffixDescriptions);
 			
 			// Check if any suffix matches the derivational suffix list
 			for (String description : suffixDescriptions) {
 				if (derivationalSuffixes.contains(description)) {
-					logger.info("Derivational suffix found: " + description);
+					logger.trace("Derivational suffix found: " + description);
 					return true; // Word has derivational suffix
 				}
 			}
 		}
-		logger.info("No derivational suffix found for word: " + word);
+		logger.trace("No derivational suffix found for word: " + word);
 		return false; // No derivational suffix found
 	}
 	

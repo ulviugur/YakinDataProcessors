@@ -28,7 +28,7 @@ public class FilterBooksAndGenerateIndexes {
 //	String booksDirPath = null;
 //	String listDirPath = null;
 //	String uqDirPath = null;
-	
+
 	File booksDir = null;
 	File listsDir = null;
 
@@ -50,14 +50,15 @@ public class FilterBooksAndGenerateIndexes {
 	TreeMap<String, TreeSet<String>> nameMap = new TreeMap<String, TreeSet<String>>();
 
 	ConfigReader cfg;
-	
+
 	public FilterBooksAndGenerateIndexes(String cfgFile) {
+
 		cfg = new ConfigReader(cfgFile);
-		
+
 		String booksDirPath = cfg.getValue("booksdir");
 		String listDirPath = cfg.getValue("listdir");
 		String uqDirPath = cfg.getValue("uqdir");
-		
+
 		booksDir = new File(booksDirPath);
 		listsDir = new File(listDirPath);
 		uqDir = new File(uqDirPath);
@@ -146,6 +147,7 @@ public class FilterBooksAndGenerateIndexes {
 			e.printStackTrace();
 		}
 	}
+
 	public void writeList(File listFile, ArrayList<String> keysObject) {
 		try {
 			FileExporter ex = new FileExporter(listFile);
@@ -160,10 +162,11 @@ public class FilterBooksAndGenerateIndexes {
 			e.printStackTrace();
 		}
 	}
+
 	public void createIndexKeys() {
 		Iterator<String> iter = nameMap.keySet().iterator();
 		int count = 0;
-		while(iter.hasNext()) {
+		while (iter.hasNext()) {
 			String key = iter.next();
 			TreeSet<String> item = nameMap.get(key);
 			String keywordsStr = GlobalUtils.convertArraytoString(item);
@@ -173,12 +176,13 @@ public class FilterBooksAndGenerateIndexes {
 			count++;
 		}
 	}
+
 	public void copyUQFiles() {
 		Iterator<String> iter = uniqueKeys.iterator();
 		while (iter.hasNext()) {
 			String item = iter.next();
-			File oldItemFile = new File (booksDir, item);
-			File newItemFile = new File (uqDir, item);
+			File oldItemFile = new File(booksDir, item);
+			File newItemFile = new File(uqDir, item);
 			logger.info("{} => {}", oldItemFile.getAbsolutePath(), newItemFile.getAbsolutePath());
 			try {
 				Files.copy(oldItemFile, newItemFile);
@@ -188,11 +192,12 @@ public class FilterBooksAndGenerateIndexes {
 			}
 		}
 	}
+
 	public void runProcess() {
 		findDuplicatesAndUniques(nameMap);
 
 		createIndexKeys();
-		
+
 		writeList(uniquesFile, uniqueKeys);
 		writeList(duplicatesFile, duplicateKeys);
 		writeList(fullListFile, indexKeys);

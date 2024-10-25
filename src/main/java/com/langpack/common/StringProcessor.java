@@ -165,8 +165,8 @@ public class StringProcessor {
 	// When books are translated into text strings, process them to clean
 	public static String removeSpecialCharacters(String input) {
 		if (specialCharsFileReader == null) {
-			//logger.error("Special characters file is not set; use StringProcessor.setSpecialCharsFile() method");
-			//logger.error("Exitting !!");
+			logger.error("Special characters file is not set; use StringProcessor.setSpecialCharsFile() method");
+			logger.error("Exitting !!");
 			System.exit(-1);
 		}
 
@@ -175,6 +175,14 @@ public class StringProcessor {
 		return retval;
 
 	}
+	public static String removePunctuationForAnalysis(String input) {
+		//String filterExp1 = "?|#|\\$|=|&|%|\\*|\\+|\\-|\\[|\\]";
+		String filterExp1 = "\\?|\\.|\\!|;|:";
+		String retval = input.replaceAll(filterExp1, "");
+		return retval;
+		
+	}
+	
 
 	public static void cleanTextFile(String inFileStr) {
 		// load English words from database to remove any of them from book text
@@ -225,5 +233,29 @@ public class StringProcessor {
 			exporter.writeLineToFile(word);
 		}
 		exporter.closeExportFile();
+	}
+	public static String extractSTCFromText(String text) {
+		String step1 = text.replaceAll("\\!”", "\\!”\r\n");
+		String step2 = step1.replaceAll("\\?”","\\?”\r\n");
+		String step3 = step2.replaceAll("\\.”","\\.”\r\n");
+		String step4 = step3.replaceAll("\\. ",". \r\n");
+
+		String step5 = step4.replace("…","\r\n");
+		
+        Pattern pattern = Pattern.compile("\\(([^)]*)\\)");
+        Matcher matcher = pattern.matcher(step4);
+
+        StringBuffer result = new StringBuffer();
+
+        // Find all occurrences of text between parentheses
+        while (matcher.find()) {
+            // Replace newlines (\r or \n) in the content between parentheses
+            String cleanedContent = matcher.group(1).replaceAll("[\\r\\n]", "");
+            // Escape the parentheses to prevent illegal group reference errors
+            matcher.appendReplacement(result, Matcher.quoteReplacement("(" + cleanedContent + ") "));
+        }
+        matcher.appendTail(result); // Append the rest of the string
+        
+		return result.toString();
 	}
 }

@@ -11,71 +11,73 @@ import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
 
+import java.io.*;
+import java.nio.charset.Charset;
+import java.util.*;
+
 public class ConfigReader {
-	// ConfigReader cannot be if nested processes are using the same object. Changed
-	// to be initialized ..
-	private String cfgFileName = null;
-	private File cfgFile = null;
+	private File cfgFile;
 	private Properties params = new Properties();
-	private FileInputStream is = null;
 	private final Charset cset = Charset.forName("UTF-8");
 
+	// Constructor initializes the configuration file
 	public ConfigReader(String cfgFileName) {
-		try {
-			initialize(cfgFileName);
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		initialize(cfgFileName);
 	}
 
+	// Returns the absolute path of the config file
 	public String getCfgFileName() {
 		return cfgFile.getAbsolutePath();
 	}
 
-	public void initialize(String cfgFileName) throws IOException, FileNotFoundException {
+	// Loads the properties from the configuration file
+	public void initialize(String cfgFileName) {
 		cfgFile = new File(cfgFileName);
-		is = new FileInputStream(cfgFile);
-		InputStreamReader isr = new InputStreamReader(is, cset);
-		params.load(isr);
+
+		// Ensure proper resource management with try-with-resources
+		FileInputStream is;
+		try {
+			is = new FileInputStream(cfgFile);
+			InputStreamReader isr = new InputStreamReader(is, cset);
+
+			// Load the properties from the file
+			params.load(isr);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+
 	}
 
+	// Get the value of a specific parameter
 	public String getValue(String tmpParam) {
 		return params.getProperty(tmpParam);
 	}
 
+	// Get the value of a specific parameter with a default value
 	public String getValue(String tmpParam, String defaultValue) {
-		if (params.getProperty(tmpParam) != null) {
-			return params.getProperty(tmpParam);
-		} else {
-			return defaultValue;
-		}
+		return params.getProperty(tmpParam, defaultValue);
 	}
 
+	// Get a string representation of the configuration file
 	public String getConfigInString() {
-		String retval = "ConfigReader\n";
-		retval += "-----------------------------\n";
-		retval += "Config filename : " + cfgFileName + "\n";
+		StringBuilder retval = new StringBuilder("ConfigReader\n");
+		retval.append("-----------------------------\n");
+		retval.append("Config filename : ").append(cfgFile.getAbsolutePath()).append("\n");
 
-		Set<Object> keys = params.keySet();
-		for (Object key : keys) {
-			Object value = params.get(key);
-			retval += (String) key + "=" + (String) value + "\n";
+		for (Map.Entry<Object, Object> entry : params.entrySet()) {
+			retval.append(entry.getKey()).append("=").append(entry.getValue()).append("\n");
 		}
-		retval += "-----------------------------\n";
-		return retval;
+		retval.append("-----------------------------\n");
+		return retval.toString();
 	}
 
+	// Convert parameters to a HashMap
 	public HashMap<String, String> getParameterMap() {
 		HashMap<String, String> retval = new HashMap<>();
-		Iterator<Object> iter = params.keySet().iterator();
-		while (iter.hasNext()) {
-			String key = (String) iter.next();
-			String value = params.getProperty(key);
-			retval.put(key, value);
+		for (Map.Entry<Object, Object> entry : params.entrySet()) {
+			retval.put((String) entry.getKey(), (String) entry.getValue());
 		}
 		return retval;
 	}

@@ -24,12 +24,6 @@ public class DataChannelFactory {
 		try {
 			cfg.initialize(cfgFileName);
 			loadChannels();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (UnknownDataChannelException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
