@@ -1,13 +1,13 @@
 package com.langpack.process;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -21,7 +21,6 @@ import com.langpack.common.GlobalUtils;
 import com.langpack.model.AnalysisWrapper;
 import com.langpack.model.AnalysisWrapper2;
 import com.langpack.model.BookQuote;
-import com.langpack.model.WordModel;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -46,10 +45,6 @@ public class BookQuoteBatch {
 	private String wordUniverseFilePathStr = null;
 	private String rootMapsFilePathStr = null;
 	private String rootStatsFilePathStr = null;
-
-	private File wordUniverseFile = null;
-	private File rootMapsFile = null;
-	private File rootStatsFile = null;
 
 	File stcFilesDirectory = null;
 	ArrayList<File> stcFiles = null;
@@ -123,10 +118,6 @@ public class BookQuoteBatch {
 		rootMapsFilePathStr = cfgReader.getValue("export.RootMapsFile", "");
 		rootStatsFilePathStr = cfgReader.getValue("export.RootStatsFile", "");
 
-		wordUniverseFile = new File(wordUniverseFilePathStr);
-		rootMapsFile = new File(rootMapsFilePathStr);
-		rootStatsFile = new File(rootStatsFilePathStr);
-
 		mongoClient = MongoClients.create(String.format("mongodb://%s:%s", server, port));
 		database = mongoClient.getDatabase(dbName);
 
@@ -144,8 +135,8 @@ public class BookQuoteBatch {
 		registerFilesFromSTCDirectory();
 
 		// load all words
-		readAllWordsFromMongo();
-		// wordSet.add("kapı");
+		// readAllWordsFromMongo();
+		wordSet.add("kapı");
 
 		// start from the first book file
 		stcReaderIter = stcMap.keySet().iterator();
@@ -192,9 +183,14 @@ public class BookQuoteBatch {
 			String stcFileName = (String) item.get("stcFile");
 			File stcFile = new File(stcFilesDirectory, stcFileName);
 			log4j.info("Registering file {} for quotes", stcFile.getAbsolutePath());
-			EndlessFileReader er = new EndlessFileReader(stcFile, item, quotePreSentences, quotePostSentences,
-					skipLines);
-			stcMap.put(stcFileName, er);
+			EndlessFileReader er = null;
+			try {
+				er = new EndlessFileReader(stcFile, item, quotePreSentences, quotePostSentences, skipLines, false);
+				stcMap.put(stcFileName, er);
+			} catch (FileNotFoundException e) {
+				log4j.info("File {} cound not be opened, skipping to take on the register ..", stcFile.getAbsolutePath());
+			}
+
 		}
 	}
 
@@ -301,7 +297,7 @@ public class BookQuoteBatch {
 		while (true) {
 			reader = getNextReader();
 
-			while (true) { // roll the cache until the minsentencelength criteria is filled 
+			while (true) { // roll the cache until the minsentencelength criteria is filled
 				paragraph = reader.rollCache();
 				String targetStc = paragraph.get(quotePreSentences);
 				String[] tokens = targetStc.split(" ");
