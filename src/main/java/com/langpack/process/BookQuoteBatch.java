@@ -75,7 +75,7 @@ public class BookQuoteBatch {
 	int quoteMaxSentenceLength;
 	int quotePreSentences;
 	int quotePostSentences;
-	int skipLines;
+	int skipPreLines;
 
 	private static final String ALLOWED_CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZçÇğĞıİöÖşŞüÜ";
 
@@ -129,7 +129,7 @@ public class BookQuoteBatch {
 		quoteMaxSentenceLength = Integer.parseInt(cfgReader.getValue("quote.MaxSentenceLength", "20"));
 		quotePreSentences = Integer.parseInt(cfgReader.getValue("quote.PreSentences", "1"));
 		quotePostSentences = Integer.parseInt(cfgReader.getValue("quote.PostSentences", "1"));
-		skipLines = Integer.parseInt(cfgReader.getValue("quoteLibrary.skipLines", "10"));
+		skipPreLines = Integer.parseInt(cfgReader.getValue("quoteLibrary.skipPreLines", "10"));
 
 		// load all book info
 		registerFilesFromSTCDirectory();
@@ -185,7 +185,7 @@ public class BookQuoteBatch {
 			log4j.info("Registering file {} for quotes", stcFile.getAbsolutePath());
 			EndlessFileReader er = null;
 			try {
-				er = new EndlessFileReader(stcFile, item, quotePreSentences, quotePostSentences, skipLines, false);
+				er = new EndlessFileReader(stcFile, item, quotePreSentences, quotePostSentences, skipPreLines, 0, false);
 				stcMap.put(stcFileName, er);
 			} catch (FileNotFoundException e) {
 				log4j.info("File {} cound not be opened, skipping to take on the register ..", stcFile.getAbsolutePath());

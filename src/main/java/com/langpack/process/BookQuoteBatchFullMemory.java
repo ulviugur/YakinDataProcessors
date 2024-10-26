@@ -29,7 +29,7 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 
 public class BookQuoteBatchFullMemory {
-	public static final Logger log4j = LogManager.getLogger("BookQuoteBatch");
+	public static final Logger log4j = LogManager.getLogger("BookQuoteBatchFullMemory");
 
 	ConfigReader cfgReader = null;
 	private String server = null;
@@ -69,7 +69,8 @@ public class BookQuoteBatchFullMemory {
 	int quoteMaxSentenceLength;
 	int quotePreSentences;
 	int quotePostSentences;
-	int skipLines;
+	int skipPreLines;
+	int skipPostLines;
 
 	private static final String ALLOWED_CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZçÇğĞıİöÖşŞüÜ";
 
@@ -117,8 +118,9 @@ public class BookQuoteBatchFullMemory {
 		quoteMaxSentenceLength = Integer.parseInt(cfgReader.getValue("quote.MaxSentenceLength", "20"));
 		quotePreSentences = Integer.parseInt(cfgReader.getValue("quote.PreSentences", "1"));
 		quotePostSentences = Integer.parseInt(cfgReader.getValue("quote.PostSentences", "1"));
-		skipLines = Integer.parseInt(cfgReader.getValue("quoteLibrary.skipLines", "10"));
-
+		skipPreLines = Integer.parseInt(cfgReader.getValue("quoteLibrary.skipPreLines", "10"));
+		skipPostLines = Integer.parseInt(cfgReader.getValue("quoteLibrary.skipPostLines", "10"));
+		
 		// load all book info
 		registerFilesFromSTCDirectory();
 
@@ -170,21 +172,23 @@ public class BookQuoteBatchFullMemory {
 			Document item = cursor.next();
 			String stcFileName = (String) item.get("stcFile");
 			File stcFile = new File(stcFilesDirectory, stcFileName);
-			log4j.info("Registering file {} for quotes", stcFile.getAbsolutePath());
+			log4j.debug("Registering file {} for quotes", stcFile.getAbsolutePath());
 
 			// fully load the file with the last parameter
 			EndlessFileReader er;
 			try {
-				er = new EndlessFileReader(stcFile, item, quotePreSentences, quotePostSentences, skipLines, true);
+				er = new EndlessFileReader(stcFile, item, quotePreSentences, quotePostSentences, skipPreLines, skipPostLines, true);
 				stcMap.put(stcFileName, er);
 			} catch (FileNotFoundException e) {
-				log4j.info("File {} cound not be opened, skipping to take on the register ..", stcFile.getAbsolutePath());
+				log4j.debug("File {} cound not be opened, skipping to take on the register ..", stcFile.getAbsolutePath());
 			}
 
 		}
 	}
 
 	public String searchQuote(ArrayList<String> contentArray, String searchWord) {
+		//log4j.info("Looking for word : {}", searchWord);
+
 		StringBuilder retval = new StringBuilder();
 		boolean found = false;
 
@@ -204,7 +208,7 @@ public class BookQuoteBatchFullMemory {
 					if (derivedList.contains(searchWord)) {
 						found = true;
 						String markedWord = "#" + targetWord + "#";
-						log4j.info("Replacing {} with {}", targetWord, markedWord);
+						//log4j.info("Replacing {} with {}", targetWord, markedWord);
 						tokens[wordCount] = markedWord;
 					}
 				}
@@ -272,35 +276,45 @@ public class BookQuoteBatchFullMemory {
 		// insert for testing purposes when found
 		insertOneQuoteRecord(data);
 
-		log4j.info("Found word {} in file {}", _root, stcFileName);
-		log4j.info("Balance => Pending {} vs. Found {}", wordSet.size(), quoteMap.size());
+		//log4j.info("Found word {} in file {}", _root, stcFileName);
+		//log4j.info("Balance => Pending {} vs. Found {}", wordSet.size(), quoteMap.size());
 	}
 
 	public void process() {
 		Iterator<String> wordIter = null;
 		ArrayList<String> paragraph = null;
 		String quoteResult = null;
-		int maxFileSearch = stcMap.size() + 1; // check all files not more
+		int maxFileSearch = 2; // check the current file 2 times;if you cannot find a word, jump
 		int fileCount = 0;
-		EndlessFileReader reader = null;
-		boolean currentFileWasGood = true; // that means, dont skip this file
+		
+		TreeSet<String> removeSet = new TreeSet<String>();
+		// tart with the first reader
+		EndlessFileReader reader = getNextReader();
+		
+		// initialise the word iterator and reset if you jump to the next file
+		wordIter = wordSet.iterator();
 		while (true) {
-			reader = getNextReader();
-
+			if (fileCount >= maxFileSearch) { // if you searched through all files
+				reader = getNextReader();
+				log4j.info("Getting next reader ..");
+				// with the new file, reset the iterator to go back to beginning words
+				wordSet.removeAll(removeSet);
+				wordIter = wordSet.iterator();
+				fileCount = 0;
+			}
 			while (true) { // roll the cache until the minsentencelength criteria is filled
 				paragraph = reader.rollCache();
 				String targetStc = paragraph.get(quotePreSentences);
+				//log4j.info("Target stc : {}", targetStc);
 				String[] tokens = targetStc.split(" ");
 				if (tokens.length >= quoteMinSentenceLength) {
 					break;
 				}
 			}
 
-			log4j.info(GlobalUtils.convertArraytoString(paragraph, " "));
+			//log4j.info(GlobalUtils.convertArraytoString(paragraph, " "));
 
-			wordIter = wordSet.iterator();
 			String word = null;
-			currentFileWasGood = false;
 			while (wordIter.hasNext()) {
 				word = wordIter.next();
 				// log4j.info("Processing word : {}", word);
@@ -308,17 +322,15 @@ public class BookQuoteBatchFullMemory {
 				quoteResult = searchQuote(paragraph, word);
 				if (quoteResult != null) { // if approved insert
 					addtoFound(word, quoteResult, reader.getFileProps());
-					wordSet.remove(word); // since we are jumping out of the loop, illegal state is not an issue
+					// add it to the removeSet and remove from the wordSet later
+					// Otherwise *ConcurrentModificationException* occurs
+					removeSet.add(word); 
 					fileCount = 0;
-					currentFileWasGood = true;
 					break;
 				}
 			}
-
-			if (fileCount >= maxFileSearch) { // if you searched through all files
-				break;
-			}
 			fileCount++;
+			log4j.info("FileCount : {}", fileCount);
 		}
 
 	}
@@ -337,7 +349,7 @@ public class BookQuoteBatchFullMemory {
 		data.setShowDate(Date.from(Instant.now()));
 		Document record = convertToDocument(data);
 		quoteColl.insertOne(record);
-		log4j.info("");
+		//log4j.info("");
 	}
 
 	public org.bson.Document convertToDocument(BookQuote data) {

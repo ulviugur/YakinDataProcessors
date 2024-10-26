@@ -19,9 +19,11 @@ public class EndlessFileReader {
 
 	private int preLineCount = 0;
 	private int postLineCount = 0;
-	private int skipLinesCount = 0;
+	private int skipPreLinesCount = 0;
+	private int skipPostLinesCount = 0; // only applicable to fullRead option
 
-	private ArrayList<String> cache = new ArrayList<String>();// use a cache for returning blocks; will only analyse target stc
+	private ArrayList<String> cache = new ArrayList<String>();// use a cache for returning blocks; will only analyse
+																// target stc
 	private int CACHE_LENGTH;
 
 	private Document fileProps = null; // this is relevant is the file is a book with properties
@@ -30,7 +32,7 @@ public class EndlessFileReader {
 	private ArrayList<String> stcArray = new ArrayList<String>();
 	private int lineCount = 0;
 
-	public EndlessFileReader(File file, Document propsDoc, int preLines, int postLines, int skipLines, boolean readAll)
+	public EndlessFileReader(File file, Document propsDoc, int preLines, int postLines, int skipPreLines, int skipPostLines, boolean readAll)
 			throws FileNotFoundException {
 		if (file.exists()) {
 			if (file.canRead()) {
@@ -38,7 +40,8 @@ public class EndlessFileReader {
 				fileProps = propsDoc;
 				preLineCount = preLines;
 				postLineCount = postLines;
-				skipLinesCount = skipLines;
+				skipPreLinesCount = skipPreLines;
+				skipPostLinesCount = skipPostLines;
 				CACHE_LENGTH = preLineCount + postLineCount + 1;
 				fullRead = readAll; // read the whole file and read from memory directly
 				openFile();
@@ -53,37 +56,51 @@ public class EndlessFileReader {
 
 	private boolean openFile() {
 		reader = new TextFileReader(sourceFile);
-
+		initialized = true;
 		// skip -n lines to strip out introductions to the book
-		for (int i = 0; i < skipLinesCount; i++) {
+		for (int i = 0; i < skipPreLinesCount; i++) {
 			try {
 				reader.readLine();
 			} catch (IOException e) {
-				initialized
+				initialized = false;
 				e.printStackTrace();
 			}
 		}
 
 		if (fullRead) {
 			String line = null;
-			while ((line = reader.readFile()) != null) {
-				stcArray.add(line);
+			try {
+				while ((line = reader.readLine()) != null) {
+					stcArray.add(line);
+				}
+				// removing last -n lines
+				for (int i = 0; i < skipPostLinesCount; i++) {
+					stcArray.remove(stcArray.size()-1);
+				}
+
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 
-		initialized = true;
 		return initialized;
 	}
 
 	public String readLine() {
 		String retval = null;
 		if (fullRead) {
-			if (lineCount < stcArray.size()) {
+			if (lineCount < stcArray.size()-1) {
 				lineCount++;
 			} else {
 				lineCount = 0;
+				log4j.info("Reached the end of the file {}", sourceFile.getAbsolutePath());
 			}
-			retval = stcArray.get(lineCount);
+			try {
+				retval = stcArray.get(lineCount);
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
 		} else {
 
 			boolean trying = true;
@@ -110,7 +127,7 @@ public class EndlessFileReader {
 	}
 
 	public ArrayList<String> rollCache() {
-		log4j.info("Reading from {}", sourceFile.getName());
+		//log4j.info("Reading from {}", sourceFile.getName());
 		if (cache.size() > 0) {
 			cache.remove(0);
 		}
@@ -133,16 +150,17 @@ public class EndlessFileReader {
 
 		EndlessFileReader rr = null;
 		try {
-			rr = new EndlessFileReader(new File("D:\\BooksRepo\\process\\epub_stc\\71712_16.50_Treni_(Agatha_Christie).stc"), null, 1, 1,
-					10, true);
+			rr = new EndlessFileReader(
+					new File("D:\\BooksRepo\\process\\epub_stc\\71712_16.50_Treni_(Agatha_Christie).stc"), null, 1, 1,
+					10, 10, true);
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		if (rr.isInitialized()) {
-			for (int i = 0; i < 3000; i++) {
+			for (int i = 0; i < 300000; i++) {
 				ArrayList<String> res = rr.rollCache();
-				log4j.info(">>>> " + GlobalUtils.convertArraytoString(res));
+				log4j.info("{} >>>> {} ", i, GlobalUtils.convertArraytoString(res));
 			}
 		} else {
 
