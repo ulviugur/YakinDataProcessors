@@ -44,28 +44,8 @@ public class ConvertBookTextToSTCFiles {
 		stcFilesDir = new File(stcDirPath);
 	}
 
+
 	private void exportSentences(String exportFileName, String text) {
-		TurkishSentenceExtractor extractor = TurkishSentenceExtractor.DEFAULT;
-
-		File exportFile = new File(stcFilesDir, exportFileName);
-		FileExporter ex = null;
-		try {
-			ex = new FileExporter(exportFile);
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		List<String> sentences = extractor.fromParagraph(text);
-		for (int i = 0; i < sentences.size(); i++) {
-			String sent = sentences.get(i);
-			// logger.info("<{}> -> {}", i, sent);
-			ex.writeLineToFile(sent);
-		}
-		logger.info("Finished with file {}", exportFile.getAbsolutePath());
-	}
-
-	private void exportSentences2(String exportFileName, String text) {
-		TurkishSentenceExtractor extractor = TurkishSentenceExtractor.DEFAULT;
 
 		File exportFile = new File(stcFilesDir, exportFileName);
 		FileExporter ex = null;
@@ -86,19 +66,17 @@ public class ConvertBookTextToSTCFiles {
 		File[] files = bookTextDir.listFiles();
 		for (int i = 0; i < files.length; i++) {
 			File item = files[i];
-			logger.info("[{}] - Processing file : {}", i, item);
+			logger.trace("[{}] - Processing file : {}", i, item);
 			TextFileReader reader = new TextFileReader(item);
 			String text = reader.readFile();
 			String base = GlobalUtils.getFileBase(item);
 			String exportFileName = base + ".stc";
-			exportSentences2(exportFileName, text);
+			exportSentences(exportFileName, text);
 		}
 	}
 
 	public static void main(String[] args) {
 
-		String res = StringProcessor.extractSTCFromText("(Defterin burasında nedense yırtılmış birkaç yaprak vardı. \r\nZehra, onları geçerek okumaya devam etti. \r\n)2");
-		
 		ConvertBookTextToSTCFiles process = new ConvertBookTextToSTCFiles(args[0]);
 		process.runProcess();
 	}

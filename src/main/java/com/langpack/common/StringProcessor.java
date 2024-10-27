@@ -242,20 +242,47 @@ public class StringProcessor {
 
 		String step5 = step4.replace("…","\r\n");
 		
-        Pattern pattern = Pattern.compile("\\(([^)]*)\\)");
-        Matcher matcher = pattern.matcher(step4);
+        Pattern pattern1 = Pattern.compile("\\(([^)]*)\\)");
+        Matcher matcher1 = pattern1.matcher(step4);
 
-        StringBuffer result = new StringBuffer();
+        StringBuffer result1 = new StringBuffer();
 
         // Find all occurrences of text between parentheses
-        while (matcher.find()) {
+        while (matcher1.find()) {
             // Replace newlines (\r or \n) in the content between parentheses
-            String cleanedContent = matcher.group(1).replaceAll("[\\r\\n]", "");
+            String cleanedContent = matcher1.group(1).replaceAll("[\\r\\n]", "");
             // Escape the parentheses to prevent illegal group reference errors
-            matcher.appendReplacement(result, Matcher.quoteReplacement("(" + cleanedContent + ") "));
+            matcher1.appendReplacement(result1, Matcher.quoteReplacement("(" + cleanedContent + ") "));
         }
-        matcher.appendTail(result); // Append the rest of the string
+        matcher1.appendTail(result1); // Append the rest of the string
         
-		return result.toString();
+        String step6 = result1.toString();
+        StringBuilder modifiedText = new StringBuilder(step6);
+
+        int index = 0;
+        while ((index = modifiedText.indexOf("”\r\n", index)) != -1) {
+            // Look for "dedi" or "diye" after "”\r\n"
+            int dediIndex = modifiedText.indexOf("dedi", index + 3);
+            int diyeIndex = modifiedText.indexOf("diye", index + 3);
+            
+            // Find the next period
+            int periodIndex = modifiedText.indexOf(".", index + 3);
+
+            // Check if "dedi" or "diye" appears before the next period
+            if ((dediIndex != -1 && dediIndex < periodIndex) || (diyeIndex != -1 && diyeIndex < periodIndex)) {
+                // Remove \r\n
+                modifiedText.delete(index + 1, index + 3);
+                // Update index to reflect the removal
+                index += 2;
+            } else {
+                // Move to the next position if no match is found
+                index += 3;
+            }
+        }
+
+        String result = modifiedText.toString();
+
+        return result;
+       
 	}
 }

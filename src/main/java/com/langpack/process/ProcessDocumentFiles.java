@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -27,11 +28,13 @@ import com.langpack.common.PDFContentReader;
 import com.langpack.common.StringProcessor;
 import com.langpack.common.TextFileReader;
 
+import afu.org.checkerframework.checker.units.qual.radians;
+
 public class ProcessDocumentFiles {
 	public static final Logger log4j = LogManager.getLogger("ProcessDocumentFiles");
 
-	String sourceDirPath = null;
-	String targetDirPath = null;
+	File sourceDir = null;
+	File targetDir = null;
 	String extensionStr = null;
 	String idFilePath = null;
 	
@@ -45,9 +48,12 @@ public class ProcessDocumentFiles {
 
 		cfg = new ConfigReader(cfgReaderPath);
 
-		sourceDirPath = cfg.getValue("inputdir");
-		targetDirPath = cfg.getValue("outputdir");
+		String sourceDirPath = cfg.getValue("inputdir");
+		String targetDirPath = cfg.getValue("outputdir");
 		extensionStr = cfg.getValue("extensions");
+		
+		sourceDir = new File(sourceDirPath);
+		targetDir = new File (targetDirPath);
 
 		extensionsArray = extensionStr.split(" ");
 		extensionsList = Arrays.asList(extensionsArray);
@@ -73,8 +79,6 @@ public class ProcessDocumentFiles {
 	}
 
 	public void process() {
-		File sourceDir = new File(sourceDirPath);
-
 		if (sourceDir.exists()) {
 			File[] dirs = sourceDir.listFiles();
 
@@ -84,119 +88,105 @@ public class ProcessDocumentFiles {
 					log4j.warn("{} is not a directory, expect a directory to process, skipping ..",
 							dir.getAbsolutePath());
 				} else {
-					processDirectory(dir, targetDirPath, extensionsList);
+					processDirectory(dir, extensionsList);
 				}
 			}
 		} else {
 			log4j.info("Inputdir {} does not exist", sourceDir.getAbsolutePath());
 		}
+
+		ledger.closeLedger();
+
 	}
 
-	public void processDirectory(File sourceDir, String targetDirPath, List<String> extensionsList) {
-		FileIterator sourceIter = null;
-		try {
-			sourceIter = new FileIterator(sourceDir);
-		} catch (InvalidRequestException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			log4j.error("Source directory cannot be initialized under {}", sourceDir.getAbsolutePath());
-		}
+	public void processDirectory(File dir, List<String> extensionsList) {
 
 		int totalCount = 0;
-		File currSourceFile = sourceIter.getCurrFile();
-		try {
-			while (currSourceFile != null) {
-				log4j.info("[{}] Current source file: \"{}\"", totalCount, currSourceFile.getAbsolutePath());
+		File currSourceFile = null;
+		File[] files = dir.listFiles();
+		for (int i = 0; i < files.length; i++) {
+			currSourceFile = files[i];
+			
+			log4j.info("[{}] Current source file: \"{}\"", totalCount, currSourceFile.getAbsolutePath());
 
-				String ext = GlobalUtils.getFileExtension(currSourceFile);
-				if (extensionsList.contains(ext)) {
+			String ext = GlobalUtils.getFileExtension(currSourceFile);
+			if (extensionsList.contains(ext)) {
 
-					if (ledger.isInledger(currSourceFile.getAbsolutePath())) {
-						log4j.info("The file exists in ledger, skipping {} ..", currSourceFile.getAbsolutePath());
-					} else {
+				if (ledger.isInledger(currSourceFile.getAbsolutePath())) {
+					log4j.info("The file exists in ledger, skipping {} ..", currSourceFile.getAbsolutePath());
+				} else {
 
-						String baseFileName = GlobalUtils.getFileBase(currSourceFile);
-						String cleanBaseFileName = cleanBaseFilename(baseFileName);
+					String baseFileName = GlobalUtils.getFileBase(currSourceFile);
+					String cleanBaseFileName = cleanBaseFilename(baseFileName);
 
-						String exportFileName = targetDirPath + cleanBaseFileName + "." + "txt";
-						File exportFile = new File(exportFileName);
+					String exportFileName = cleanBaseFileName + "." + "txt";
+					File exportFile = new File(targetDir, exportFileName);
 
-						String content = null;
+					String content = null;
 
-						if (currSourceFile.getAbsolutePath().toLowerCase().contains("pdf")) {
-							PDFContentReader instance = new PDFContentReader(totalCount, currSourceFile);
+					if (currSourceFile.getAbsolutePath().toLowerCase().contains("pdf")) {
+						PDFContentReader instance = new PDFContentReader(totalCount, currSourceFile);
 
-							String rawContent = instance.readContent();
-							if (rawContent == null || rawContent.length() < 100) {
-								log4j.warn("[{}] Skipping file: \"{}\" as it is empty or minimally readable !",
-										totalCount, currSourceFile.getAbsolutePath());
-								currSourceFile = sourceIter.moveToNextTarget();
-								totalCount++;
+						String rawContent = instance.readContent();
+						if (rawContent == null || rawContent.length() < 100) {
+							log4j.warn("[{}] Skipping file: \"{}\" as it is empty or minimally readable !",
+									totalCount, currSourceFile.getAbsolutePath());
+							continue;
+						}
+
+						content = instance.analyzeTextFollowingDashes(rawContent);
+
+						if (content == null || content.length() < 100) {
+							log4j.warn("[{}] Skipping file: \"{}\" as it is empty or minimally readable !",
+									totalCount, currSourceFile.getAbsolutePath());
+							continue;
+						} else {
+
+							FileExporter fExporter = null;
+							try {
+								fExporter = new FileExporter(exportFile);
+							} catch (FileNotFoundException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
 							}
+							fExporter.writeStringToFile(content);
+							fExporter.closeExportFile();
+							log4j.info("Content of {} bytes are written to file {}", content.length(),
+									exportFile.getAbsoluteFile());
+						}
 
-							content = instance.analyzeTextFollowingDashes(rawContent);
+					} else if (currSourceFile.getAbsolutePath().toLowerCase().contains("epub")) {
 
-							if (content == null || content.length() < 100) {
-								log4j.warn("[{}] Skipping file: \"{}\" as it is empty or minimally readable !",
-										totalCount, currSourceFile.getAbsolutePath());
-								currSourceFile = sourceIter.moveToNextTarget();
-								totalCount++;
-							} else {
-
-								FileExporter fExporter = null;
-								try {
-									fExporter = new FileExporter(exportFile);
-								} catch (FileNotFoundException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-								fExporter.writeStringToFile(content);
-								fExporter.closeExportFile();
-								log4j.info("Content of {} bytes are written to file {}", content.length(),
-										exportFile.getAbsoluteFile());
+						content = getEPUBContent(currSourceFile);
+						if (content == null || content.length() < 100) {
+							log4j.warn("[{}] Skipping file: \"{}\" as it is empty !", totalCount,
+									currSourceFile.getAbsolutePath());
+						} else {
+							FileExporter fExporter = null;
+							try {
+								fExporter = new FileExporter(exportFile);
+							} catch (FileNotFoundException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
 							}
-
-						} else if (currSourceFile.getAbsolutePath().toLowerCase().contains("epub")) {
-
-							content = getEPUBContent(currSourceFile);
-							if (content == null || content.length() == 0) {
-								log4j.warn("[{}] Skipping file: \"{}\" as it is empty !", totalCount,
-										currSourceFile.getAbsolutePath());
-							} else {
-								FileExporter fExporter = null;
-								try {
-									fExporter = new FileExporter(exportFile);
-								} catch (FileNotFoundException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-								fExporter.writeStringToFile(content);
-								fExporter.closeExportFile();
-								log4j.info("Content of {} bytes are written to file {}", content.length(),
-										exportFile.getAbsoluteFile());
-							}
+							fExporter.writeStringToFile(content);
+							fExporter.closeExportFile();
+							log4j.info("Content of {} bytes are written to file {}", content.length(),
+									exportFile.getAbsoluteFile());
 						}
 					}
-				} else {
-					log4j.debug("[{}] File skipped due to untracked extension : \"{}\"", totalCount,
-							currSourceFile.getAbsolutePath());
 				}
-				ledger.addtoLedger(currSourceFile.getAbsolutePath());
-
-				currSourceFile = sourceIter.moveToNextTarget();
-				totalCount++;
+			} else {
+				log4j.debug("[{}] File skipped due to untracked extension : \"{}\"", totalCount,
+						currSourceFile.getAbsolutePath());
 			}
-		} catch (InvalidRequestException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			log4j.error("Exitting");
-			System.exit(-1);
-		} catch (Exception ex) {
-			ledger.closeLedger();
+			ledger.addtoLedger(currSourceFile.getAbsolutePath());
+			totalCount++;
 		}
+		
 	}
 
-	private String getEPUBContent(File currSourceFile) {
+	public static String getEPUBContent(File currSourceFile) {
 		String retval = null;
 		EPUBContentReader instance = new EPUBContentReader();
 		try {
@@ -209,6 +199,11 @@ public class ProcessDocumentFiles {
 		return retval;
 	}
 
+	// remove unwanted character strings
+	// put the author details in the correct order
+	// remove (z-lib.org)
+	// remove 
+	
 	public static String cleanBaseFilename(String tmpFilename) {
 
 		StringBuilder sb = new StringBuilder();
@@ -267,9 +262,7 @@ public class ProcessDocumentFiles {
 		}
 		log4j.info("Loaded {} ids for files", idMap.size());
 
-		File targetdir = new File(targetDirPath);
-
-		File[] fileList = targetdir.listFiles();
+		File[] fileList = targetDir.listFiles();
 		Integer nextid = maxid + 1;
 		int count = 0;
 		for (int i = 0; i < fileList.length; i++) {
@@ -320,6 +313,12 @@ public class ProcessDocumentFiles {
 	}
 
 	public static void main(String[] args) {
+		
+//		File infile = new File("D:\\BooksRepo\\del\\DEL\\87279_Şeytanın İksirleri (Hoffmann E.T.A.) (z-lib.org).epub");
+//		String retval = ProcessDocumentFiles.getEPUBContent(infile);
+//		System.out.println(retval);
+//		System.exit(0);
+		
 		ProcessDocumentFiles instance = new ProcessDocumentFiles(args[0]);
 
 		instance.process();
