@@ -120,7 +120,7 @@ public class BookQuoteBatchFullMemory {
 		quotePostSentences = Integer.parseInt(cfgReader.getValue("quote.PostSentences", "1"));
 		skipPreLines = Integer.parseInt(cfgReader.getValue("quoteLibrary.skipPreLines", "10"));
 		skipPostLines = Integer.parseInt(cfgReader.getValue("quoteLibrary.skipPostLines", "10"));
-		
+
 		// load all book info
 		registerFilesFromSTCDirectory();
 
@@ -168,26 +168,31 @@ public class BookQuoteBatchFullMemory {
 		FindIterable<Document> iter = linkColl.find();
 		MongoCursor<Document> cursor = iter.cursor();
 
+		int count = 0;
 		while (cursor.hasNext()) {
 			Document item = cursor.next();
 			String stcFileName = (String) item.get("stcFile");
 			File stcFile = new File(stcFilesDirectory, stcFileName);
-			log4j.debug("Registering file {} for quotes", stcFile.getAbsolutePath());
+			log4j.info("[{}] Registering file {} for quotes", count, stcFile.getAbsolutePath());
 
 			// fully load the file with the last parameter
 			EndlessFileReader er;
 			try {
 				er = new EndlessFileReader(stcFile, item, quotePreSentences, quotePostSentences, skipPreLines, skipPostLines, true);
-				stcMap.put(stcFileName, er);
+				if (er.isInitialized()) {
+					stcMap.put(stcFileName, er);
+				} else {
+					log4j.info("Skipping file {} as it was not initialized ..", stcFileName);
+				}
 			} catch (FileNotFoundException e) {
 				log4j.debug("File {} cound not be opened, skipping to take on the register ..", stcFile.getAbsolutePath());
 			}
-
+			count++;
 		}
 	}
 
 	public String searchQuote(ArrayList<String> contentArray, String searchWord) {
-		//log4j.info("Looking for word : {}", searchWord);
+		// log4j.info("Looking for word : {}", searchWord);
 
 		StringBuilder retval = new StringBuilder();
 		boolean found = false;
@@ -208,7 +213,7 @@ public class BookQuoteBatchFullMemory {
 					if (derivedList.contains(searchWord)) {
 						found = true;
 						String markedWord = "#" + targetWord + "#";
-						//log4j.info("Replacing {} with {}", targetWord, markedWord);
+						// log4j.info("Replacing {} with {}", targetWord, markedWord);
 						tokens[wordCount] = markedWord;
 					}
 				}
@@ -276,8 +281,9 @@ public class BookQuoteBatchFullMemory {
 		// insert for testing purposes when found
 		insertOneQuoteRecord(data);
 
-		//log4j.info("Found word {} in file {}", _root, stcFileName);
-		//log4j.info("Balance => Pending {} vs. Found {}", wordSet.size(), quoteMap.size());
+		// log4j.info("Found word {} in file {}", _root, stcFileName);
+		// log4j.info("Balance => Pending {} vs. Found {}", wordSet.size(),
+		// quoteMap.size());
 	}
 
 	public void process() {
@@ -286,11 +292,11 @@ public class BookQuoteBatchFullMemory {
 		String quoteResult = null;
 		int maxFileSearch = 2; // check the current file 2 times;if you cannot find a word, jump
 		int fileCount = 0;
-		
+
 		TreeSet<String> removeSet = new TreeSet<String>();
 		// tart with the first reader
 		EndlessFileReader reader = getNextReader();
-		
+
 		// initialise the word iterator and reset if you jump to the next file
 		wordIter = wordSet.iterator();
 		while (true) {
@@ -305,14 +311,14 @@ public class BookQuoteBatchFullMemory {
 			while (true) { // roll the cache until the minsentencelength criteria is filled
 				paragraph = reader.rollCache();
 				String targetStc = paragraph.get(quotePreSentences);
-				//log4j.info("Target stc : {}", targetStc);
+				// log4j.info("Target stc : {}", targetStc);
 				String[] tokens = targetStc.split(" ");
 				if (tokens.length >= quoteMinSentenceLength) {
 					break;
 				}
 			}
 
-			//log4j.info(GlobalUtils.convertArraytoString(paragraph, " "));
+			// log4j.info(GlobalUtils.convertArraytoString(paragraph, " "));
 
 			String word = null;
 			while (wordIter.hasNext()) {
@@ -324,7 +330,7 @@ public class BookQuoteBatchFullMemory {
 					addtoFound(word, quoteResult, reader.getFileProps());
 					// add it to the removeSet and remove from the wordSet later
 					// Otherwise *ConcurrentModificationException* occurs
-					removeSet.add(word); 
+					removeSet.add(word);
 					fileCount = 0;
 					break;
 				}
@@ -349,7 +355,7 @@ public class BookQuoteBatchFullMemory {
 		data.setShowDate(Date.from(Instant.now()));
 		Document record = convertToDocument(data);
 		quoteColl.insertOne(record);
-		//log4j.info("");
+		// log4j.info("");
 	}
 
 	public org.bson.Document convertToDocument(BookQuote data) {

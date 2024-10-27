@@ -32,8 +32,8 @@ public class EndlessFileReader {
 	private ArrayList<String> stcArray = new ArrayList<String>();
 	private int lineCount = 0;
 
-	public EndlessFileReader(File file, Document propsDoc, int preLines, int postLines, int skipPreLines, int skipPostLines, boolean readAll)
-			throws FileNotFoundException {
+	public EndlessFileReader(File file, Document propsDoc, int preLines, int postLines, int skipPreLines, int skipPostLines,
+			boolean readAll) throws FileNotFoundException {
 		if (file.exists()) {
 			if (file.canRead()) {
 				sourceFile = file;
@@ -73,9 +73,14 @@ public class EndlessFileReader {
 				while ((line = reader.readLine()) != null) {
 					stcArray.add(line);
 				}
-				// removing last -n lines
-				for (int i = 0; i < skipPostLinesCount; i++) {
-					stcArray.remove(stcArray.size()-1);
+				if (stcArray.size() > skipPostLinesCount) {
+					// removing last -n lines
+					for (int i = 0; i < skipPostLinesCount; i++) {
+						stcArray.remove(stcArray.size() - 1);
+					}
+				} else {
+					initialized = false;
+					return initialized;
 				}
 
 			} catch (IOException e) {
@@ -90,7 +95,7 @@ public class EndlessFileReader {
 	public String readLine() {
 		String retval = null;
 		if (fullRead) {
-			if (lineCount < stcArray.size()-1) {
+			if (lineCount < stcArray.size() - 1) {
 				lineCount++;
 			} else {
 				lineCount = 0;
@@ -127,7 +132,7 @@ public class EndlessFileReader {
 	}
 
 	public ArrayList<String> rollCache() {
-		//log4j.info("Reading from {}", sourceFile.getName());
+		// log4j.info("Reading from {}", sourceFile.getName());
 		if (cache.size() > 0) {
 			cache.remove(0);
 		}
@@ -150,8 +155,7 @@ public class EndlessFileReader {
 
 		EndlessFileReader rr = null;
 		try {
-			rr = new EndlessFileReader(
-					new File("D:\\BooksRepo\\process\\epub_stc\\71712_16.50_Treni_(Agatha_Christie).stc"), null, 1, 1,
+			rr = new EndlessFileReader(new File("D:\\BooksRepo\\process\\epub_stc\\71712_16.50_Treni_(Agatha_Christie).stc"), null, 1, 1,
 					10, 10, true);
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
