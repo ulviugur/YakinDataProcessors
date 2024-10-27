@@ -5,8 +5,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -21,54 +22,43 @@ public class EPUBContentReader {
 
 	public static final Logger log4j = LogManager.getLogger("ProcessPDFFiles");
 
-	//private static final String TEXT_DIR = "OEBPS/Text/"; // This structure is not consistent, processing the whole lot is correct
+	// private static final String TEXT_DIR = "OEBPS/Text/"; // This structure is
+	// not consistent, processing the whole lot is correct
 
 	public String extractTextFromEpub(File epubFile) throws IOException {
 		ZipFile zipFile = null;
 		StringBuilder textContent = new StringBuilder();
+		List<String> spineOrder = null;
 
 		try {
 			zipFile = new ZipFile(epubFile);
 
-			List<? extends ZipEntry> entries = zipFile.stream().sorted(Comparator.comparing(ZipEntry::getName)).toList();
+			spineOrder =getSpineOrderFromEpub(zipFile);
 
-			for (ZipEntry entry : entries) {
-				String name = entry.getName();
+			// Process XHTML files in the order specified by the spine
+			for (String spineEntry : spineOrder) {
+				// First, try with "OEBPS/" prefix
+				ZipEntry entry = zipFile.getEntry("OEBPS/" + spineEntry);
 
-				if ((entry.getName().endsWith(".html") || entry.getName().endsWith(".xhtml")
+				// If entry is null, try without the "OEBPS/" prefix
+				if (entry == null) {
+					entry = zipFile.getEntry(spineEntry);
+				}
+
+				if (entry != null && (entry.getName().endsWith(".html") || entry.getName().endsWith(".xhtml")
 						|| entry.getName().endsWith(".htm"))) {
-					log4j.info("Processing file : {}", name);
-					InputStream inputStream = null;
-					try {
-						inputStream = zipFile.getInputStream(entry);
+					log4j.debug("Processing file : {}", entry.getName());
+					try (InputStream inputStream = zipFile.getInputStream(entry)) {
 						Document document = Jsoup.parse(inputStream, StandardCharsets.UTF_8.name(), "");
 
-						// Select all elements
+						// Select all elements and append text from elements without children
 						Elements elements = document.select("*");
-
-						// Iterate through each selected element
 						for (Element element : elements) {
-							// Only append text from elements that do not have any child elements
 							if (element.children().isEmpty()) {
-								String elementText = element.text().trim(); // Get the text of the deepest elements
-
-								// Append text content if it's not empty
+								String elementText = element.text().trim();
 								if (!elementText.isEmpty()) {
-									// textContent.append(elementText).append("\n"); \n was added for separation
-									// yet some books even separate words within spans
-									// which splits words with space ("Eğer cinayet işleme mişseniz")
-									// Lets test it without space.
 									textContent.append(elementText);
 								}
-							}
-						}
-
-					} finally {
-						if (inputStream != null) {
-							try {
-								inputStream.close();
-							} catch (IOException e) {
-								e.printStackTrace();
 							}
 						}
 					}
@@ -76,7 +66,7 @@ public class EPUBContentReader {
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-			throw e; // Re-throw exception to signal failure
+			throw e;
 		} finally {
 			if (zipFile != null) {
 				try {
@@ -89,9 +79,55 @@ public class EPUBContentReader {
 		// log4j.info("Dirty text : {}", textContent.toString());
 		String retval = StringProcessor.cleanBookString(textContent.toString());
 		// log4j.info("Clean text : {}", retval);
-		return retval; // Return the cleaned-up string
+		return retval;
 	}
 
+	/**
+     * Extracts the spine order from the EPUB's content.opf file.
+     *
+     * @param zipFile The ZipFile reference for the EPUB.
+     * @return A list of spine entries (file paths) in reading order.
+     * @throws IOException if an error occurs while reading the zip file.
+     */
+    public static List<String> getSpineOrderFromEpub(ZipFile zipFile) throws IOException {
+        List<String> spineOrder = new ArrayList<>();
+        ZipEntry contentOpfEntry = zipFile.getEntry("META-INF/container.xml");
+
+        if (contentOpfEntry == null) {
+            throw new IOException("META-INF/container.xml not found in the EPUB.");
+        }
+
+        // Locate content.opf from the container.xml
+        try (InputStream containerStream = zipFile.getInputStream(contentOpfEntry)) {
+            Document containerDoc = Jsoup.parse(containerStream, StandardCharsets.UTF_8.name(), "");
+            String opfPath = containerDoc.select("rootfile").attr("full-path");
+
+            // Read the content.opf file
+            try (InputStream contentOpfStream = zipFile.getInputStream(zipFile.getEntry(opfPath))) {
+                Document opfDocument = Jsoup.parse(contentOpfStream, StandardCharsets.UTF_8.name(), "");
+
+                // Map item IDs to file paths from the manifest
+                Map<String, String> idToHref = new HashMap<>();
+                Elements items = opfDocument.select("manifest > item");
+                for (Element item : items) {
+                    String id = item.attr("id");
+                    String href = item.attr("href");
+                    idToHref.put(id, href);
+                }
+
+                // Build the spine order using idrefs and hrefs
+                Elements spineItems = opfDocument.select("spine > itemref");
+                for (Element itemref : spineItems) {
+                    String idref = itemref.attr("idref");
+                    if (idToHref.containsKey(idref)) {
+                        spineOrder.add(idToHref.get(idref));
+                    }
+                }
+            }
+        }
+        
+        return spineOrder;
+    }
 	private List<Integer> monitorKey(String content, String searchKey) {
 		List<Integer> retval = new ArrayList<>();
 
