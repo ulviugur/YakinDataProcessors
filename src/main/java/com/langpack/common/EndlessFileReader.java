@@ -160,7 +160,7 @@ public class EndlessFileReader {
 		if (rr.isInitialized()) {
 			for (int i = 0; i < 300000; i++) {
 				ArrayList<String> res = rr.rollCache();
-				log4j.info("{} >>>> {} ", i, GlobalUtils.convertArraytoString(res));
+				log4j.info("{} >>>> {} ", i, GlobalUtils.convertArrayToString(res));
 			}
 		} else {
 

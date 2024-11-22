@@ -13,6 +13,7 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import com.langpack.common.ConfigReader;
@@ -46,7 +47,7 @@ public class ChromeHeadless {
 		// options.addArguments("--disable-gpu",
 		// "--window-size=1920,1200","--ignore-certificate-errors");
 
-		//driver = new ChromeDriver();
+		// driver = new ChromeDriver();
 		driver = new ChromeDriver(options);
 
 		// Creating an object of ChromeDriver driver = new ChromeDriver();
@@ -58,17 +59,43 @@ public class ChromeHeadless {
 		// driver.manage().timeouts().pageLoadTimeout(5, TimeUnit.SECONDS);
 		// driver.manage().timeouts().implicitlyWait(5, TimeUnit.SECONDS);
 	}
+
 	public String getURLContent(String url) {
-		
-        //driver.get("https://1000kitap.com/ara?q=Harnilton+Edmond&bolum=yazarlar&hl=tr");
+
+		// driver.get("https://1000kitap.com/ara?q=Harnilton+Edmond&bolum=yazarlar&hl=tr");
 		driver.get(url);
 
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(20));
-        wait.until((ExpectedCondition<Boolean>) wd ->
-            ((JavascriptExecutor) wd).executeScript("return document.readyState").equals("complete"));
-        
-        String pageSource = driver.getPageSource();
-        return pageSource;
+		String pageSource = driver.getPageSource();
+
+		return pageSource;
+	}
+
+	public void gotoURL(String url) {
+
+		// driver.get("https://1000kitap.com/ara?q=Harnilton+Edmond&bolum=yazarlar&hl=tr");
+		driver.get(url);
+
+	}
+
+
+	public String getPageSource() {
+		String pageSource = driver.getPageSource();
+		return pageSource;
+	}
+	
+	public WebElement waitForCaptcha(Integer waitSeconds, String capthaElementIdentifier) {
+		WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(waitSeconds));
+		WebElement element = null;
+		try {
+			// Replace with a unique element that appears only after CAPTCHA is completed
+			element = wait.until(ExpectedConditions.presenceOfElementLocated(By.id(capthaElementIdentifier)));
+			System.out.println("CAPTCHA completed, proceeding with the rest of the script.");
+
+		} catch (org.openqa.selenium.TimeoutException e) {
+			// e.printStackTrace();
+			System.out.println("Timed out waiting for CAPTCHA to be completed.");
+		}
+		return element;
 	}
 
 	public void closeChromeHeadless() {
@@ -124,7 +151,7 @@ public class ChromeHeadless {
 			}
 
 		} while (moveon);
-		log4j.info(String.format("Found entries : %s", GlobalUtils.convertArraytoString(retval)));
+		log4j.info(String.format("Found entries : %s", GlobalUtils.convertArrayToString(retval)));
 		return retval;
 	}
 

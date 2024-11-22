@@ -83,7 +83,7 @@ public class MockPhraseInQuoteChecker {
 			}
 			count++;
 		}
-		//log4j.info("Derived list {} : {}", word, GlobalUtils.convertArraytoString(derivedWords));
+		//log4j.info("Derived list {} : {}", word, GlobalUtils.convertArrayToString(derivedWords));
 		return derivedWords;
 	}
 	
@@ -131,14 +131,14 @@ public class MockPhraseInQuoteChecker {
 			while ((line = reader.readLine()) != null) {
 				TreeSet<String> wordList = getDerivedWords(line);
 				if (wordList.size() > 0) {
-					String words = GlobalUtils.convertArraytoString(wordList, ", ");
+					String words = GlobalUtils.convertArrayToString(wordList, ", ");
 					// System.out.print(count + ", ");
 					log4j.trace("{} - From word <{}>, derived : [{}]", count, line, words);
 				} else {
 					log4j.trace("{} - No words could be derived from {}", count, line);
 				}
 				count++;
-				// log4j.info("Lemmas {}", GlobalUtils.convertArraytoString(LEMMAS, ", "));
+				// log4j.info("Lemmas {}", GlobalUtils.convertArrayToString(LEMMAS, ", "));
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

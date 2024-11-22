@@ -332,7 +332,7 @@ public class TextFileImporter {
 
 				int res = psUpdate.executeUpdate();
 				log4j.info(String.format("{ %s } Updated %s records with %s", lineCount, res,
-						GlobalUtils.convertArraytoString(line)));
+						GlobalUtils.convertArrayToString(line)));
 				updateCount++;
 			} catch (SQLException e) {
 				// TODO Auto-generated catch block

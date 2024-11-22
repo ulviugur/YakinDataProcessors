@@ -1,5 +1,6 @@
 package com.langpack.scraper;
 
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -52,7 +53,13 @@ public class TurengLookup extends BasicClass {
 
 				fullURL = String.format("%s%s", sourceFolder, word);
 
-				String page = GlobalUtils.callWebsite(fullURL);
+				String page = null;;
+				try {
+					page = GlobalUtils.callWebsite(fullURL);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				if (page == null || page.contains("Maybe the correct one is")) {
 					page = "";
 					pageFound = false;

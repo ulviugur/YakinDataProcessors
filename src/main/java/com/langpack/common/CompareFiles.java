@@ -90,9 +90,9 @@ public class CompareFiles {
 				log4j.info(String.format("Inconsistent data array lengths between 2 datasets !! <%s vs. %s> ",
 						Integer.toString(values1.length), Integer.toString(values2.length)));
 			} else {
-				String str1 = GlobalUtils.convertArraytoString(values1);
+				String str1 = GlobalUtils.convertArrayToString(values1);
 				str1 = str1.replaceAll(" ", "");
-				String str2 = GlobalUtils.convertArraytoString(values2);
+				String str2 = GlobalUtils.convertArrayToString(values2);
 				str2 = str2.replaceAll(" ", "");
 				if (!str1.equals(str2)) {
 					exporter.writeLineToFile("1:" + str1);

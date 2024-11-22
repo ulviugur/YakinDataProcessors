@@ -101,7 +101,7 @@ public class XLDBInterface_1 {
 				int colCount = 1;
 				ArrayList<String> data = XLUtils.readRow(row, 2);
 				log4j.info(String.format("Processing row [%s] : %s", rowNumber,
-						GlobalUtils.convertArraytoString(data, "; ")));
+						GlobalUtils.convertArrayToString(data, "; ")));
 
 				for (Map.Entry<String, String> entry : fieldMapping.entrySet()) {
 					String key = entry.getKey();
@@ -122,10 +122,10 @@ public class XLDBInterface_1 {
 					psInsert.executeUpdate();
 				} catch (java.sql.SQLIntegrityConstraintViolationException ex) {
 					log4j.warn(String.format("Line [%s] content [%s] already exists, skipping ..", rowNumber + 1,
-							GlobalUtils.convertArraytoString(data)));
+							GlobalUtils.convertArrayToString(data)));
 				}
 
-				// log4j.info(GlobalUtils.convertArraytoString(data, "; "));
+				// log4j.info(GlobalUtils.convertArrayToString(data, "; "));
 				rowNumber++;
 				// System.exit(-1);;
 			} while ((rowObject = sourceDatabase.getNextRow()) != null);

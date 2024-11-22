@@ -302,7 +302,7 @@ public class ZLibraryScrapeAndInsert {
 					String content = getContent(zFile, entry);
 					WikiLevel2Parser wikiParser = new WikiLevel2Parser();
 					TreeSet<String> wordsSet = ledgerManager.cleanseWordlist(content, wikiParser);
-					String words = GlobalUtils.convertArraytoString(wordsSet, ", ");
+					String words = GlobalUtils.convertArrayToString(wordsSet, ", ");
 					logger.info("*** " + words + " ***");
 					ledgerManager.saveWordListIntoLedgerTable(wordsSet, file.getName());
 					ledgerManager.lookupInTDK();
@@ -330,7 +330,7 @@ public class ZLibraryScrapeAndInsert {
 
 				WikiLevel2Parser wikiParser = new WikiLevel2Parser();
 				TreeSet<String> wordsSet = ledgerManager.cleanseWordlist(content, wikiParser);
-				String words = GlobalUtils.convertArraytoString(wordsSet, ", ");
+				String words = GlobalUtils.convertArrayToString(wordsSet, ", ");
 				logger.info("*** " + words + " ***");
 				ledgerManager.saveWordListIntoLedgerTable(wordsSet, file.getName());
 				// ledgerManager.lookupInTDK();

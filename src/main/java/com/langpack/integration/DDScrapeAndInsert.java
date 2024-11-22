@@ -202,7 +202,7 @@ public class DDScrapeAndInsert {
 							} catch (SQLException e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
-								System.out.println(GlobalUtils.convertArraytoString(values, ","));
+								System.out.println(GlobalUtils.convertArrayToString(values, ","));
 							}
 
 						} else {

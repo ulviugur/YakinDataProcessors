@@ -208,7 +208,7 @@ public class WordGenerator {
 		for (Integer element : currentWordArray) {
 			retval.append(LT[element]);
 		}
-		// log4j.info("PA >> " + GlobalUtils.convertArraytoString(PA));
+		// log4j.info("PA >> " + GlobalUtils.convertArrayToString(PA));
 		return retval.toString();
 	}
 

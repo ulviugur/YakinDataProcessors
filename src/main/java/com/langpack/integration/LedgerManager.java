@@ -165,13 +165,13 @@ public class LedgerManager extends BasicClass {
 		log4j.info(level2_2);
 
 		TreeSet<String> words = parser.getWordsAsCollection();
-		log4j.info(GlobalUtils.convertArraytoString(words, ";"));
+		log4j.info(GlobalUtils.convertArrayToString(words, ";"));
 		TreeSet<String> words2 = htmlTagList.removeHTMLTags(words);
-		// logger.info(GlobalUtils.convertArraytoString(words2, ";"));
+		// logger.info(GlobalUtils.convertArrayToString(words2, ";"));
 		TreeSet<String> words3 = TokenList.removeTokens(words2);
-		// logger.info(GlobalUtils.convertArraytoString(words3, ";"));
+		// logger.info(GlobalUtils.convertArrayToString(words3, ";"));
 		retval = parser.postProcess(words3);
-		// logger.info(GlobalUtils.convertArraytoString(retval, ";"));
+		// logger.info(GlobalUtils.convertArrayToString(retval, ";"));
 		return retval;
 	}
 	// Full dictionary created ..
@@ -346,7 +346,7 @@ public class LedgerManager extends BasicClass {
 						}
 					}
 					fullList.addAll(words);
-					String values = GlobalUtils.convertArraytoString(words);
+					String values = GlobalUtils.convertArrayToString(words);
 					if (words.size() > 0) {
 						log4j.info("Found entries :" + values);
 					}
@@ -365,58 +365,11 @@ public class LedgerManager extends BasicClass {
 		ledger.closeLedger();
 	}
 
-	public void runThroughFocus() { // focus means number of characters which make a key to be checked after. 3 is
-									// used 4,5 can also be used to verify holes
-
-		Integer ROUND_ROBIN = 0; // assign task to workers in a round-robin
-
-		WordGenerator gen = new WordGenerator(focus);
-
-		TreeMap<Integer, ChromeWorker> workerArray = new TreeMap<>();
-		TreeMap<Integer, Thread> threadArray = new TreeMap<>();
-
-		for (Integer i = 0; i < WORKER_SIZE; i++) {
-			ChromeWorker queWorker = new ChromeWorker(cfg.getValue("QueueLedgerConfigFile"));
-			workerArray.put(i, queWorker);
-			Thread t1 = new Thread(queWorker);
-			threadArray.put(i, t1);
-			t1.start();
-		}
-
-		if (CREATE_FOCUS_ITEMS) {
-			String keyNew = gen.nextWord();
-			do {
-				log4j.info("Adding key to the Queue : _" + keyNew + "_");
-				try {
-					ChromeWorker tmpWorker = workerArray.get(ROUND_ROBIN);
-					tmpWorker.addToQueueTable(keyNew, keyNew);
-					ROUND_ROBIN++;
-					if (ROUND_ROBIN > WORKER_SIZE - 1) {
-						ROUND_ROBIN = 0;
-					}
-				} catch (Exception ex) {
-					ex.printStackTrace();
-				}
-
-			} while ((keyNew = gen.nextWord()) != null);
-		}
-
-		for (Integer threadId : threadArray.keySet()) {
-			Thread thread = threadArray.get(threadId);
-			try {
-				thread.join();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-	}
 
 	public static void main(String[] args) {
 		System.out.println("classpath=" + System.getProperty("java.class.path"));
 
 		LedgerManager instance = new LedgerManager(args[0]);
-		instance.runThroughFocus();
 
 		// instance.scanTablesforWords();
 		// instance.saveWordListingDB();

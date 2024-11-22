@@ -1,5 +1,6 @@
 package com.langpack.scraper;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -28,7 +29,13 @@ public class PageParser {
 
 	public static void main(String[] args) {
 		PageParser parser = new PageParser();
-		String result = GlobalUtils.callWebsite("file:///E://tmp//TEST_PC3.txt", 10000);
+		String result = null;
+		try {
+			result = GlobalUtils.callWebsite("file:///E://tmp//TEST_PC3.txt", 10000);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 		Qualifier qualifier1 = new Qualifier("class='list2'", 1, "<table ", "</table>", Qualifier.GO_BACKWARD);
 		String block1 = parser.findBlock(result, qualifier1);

@@ -553,13 +553,13 @@ public class ZLibraryDownloader {
 	}
 
 	private String getAttributeValuesAsString(Elements nodes, String attrName, String attrValue) {
-		String retval = GlobalUtils.convertArraytoString(getAttributeValuesAsArray(nodes, attrName, attrValue),
+		String retval = GlobalUtils.convertArrayToString(getAttributeValuesAsArray(nodes, attrName, attrValue),
 				VALUES_SEPARATOR);
 		return retval;
 	}
 
 	private String getAttributeValuesAsString(Element node, String attrName, String attrValue) {
-		String retval = GlobalUtils.convertArraytoString(getAttributeValuesAsArray(node, attrName, attrValue),
+		String retval = GlobalUtils.convertArrayToString(getAttributeValuesAsArray(node, attrName, attrValue),
 				VALUES_SEPARATOR);
 		return retval;
 	}

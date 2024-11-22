@@ -95,7 +95,7 @@ public class AnalysisWrapper2 {
 			}
 			count++;
 		}
-		//log4j.info("Derived list {} : {}", word, GlobalUtils.convertArraytoString(derivedWords));
+		//log4j.info("Derived list {} : {}", word, GlobalUtils.convertArrayToString(derivedWords));
 		return derivedWords;
 	}
 	

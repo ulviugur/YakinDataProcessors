@@ -48,7 +48,7 @@ public class GlobalUtils {
 	public static String GMAP_KEY = "AIzaSyDGimeDVxhpBy8YF9OMVmaAT58QCPGaEl0";
 
 	private static final String ALLOWED_CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZçÇğĞıİöÖşŞüÜ ";
-	
+
 	public static final Logger log4j = LogManager.getLogger("GlobalUtils");
 	public static DecimalFormat COORDS_FORMATTER = new DecimalFormat("##0.000000");
 
@@ -119,26 +119,20 @@ public class GlobalUtils {
 		return retval;
 	}
 
-	public static String callWebsite(String stringURL) {
+	public static String callWebsite(String stringURL) throws IOException {
 		String content = callWebsite(stringURL, 10000);
 		return content;
 	}
 
-	public static String callWebsite(String stringURL, int timeout) {
+	public static String callWebsite(String stringURL, int timeout) throws IOException {
 		Document doc = null;
 		String content = null;
-		try {
-			org.jsoup.Connection conn = Jsoup.connect(stringURL);
-			conn.timeout(timeout);
-			doc = conn.get();
-			content = doc.html();
-		} catch (HttpStatusException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
+
+		org.jsoup.Connection conn = Jsoup.connect(stringURL);
+		conn.timeout(timeout);
+		doc = conn.get();
+		content = doc.html();
+
 		return content;
 	}
 
@@ -285,23 +279,24 @@ public class GlobalUtils {
 		return retval;
 	}
 
-	public static String convertArraytoString(Collection<String> array, String separator) {
+	public static String convertArrayToString(Collection<String> array, String separator) {
 		StringBuilder sb = new StringBuilder();
 		if (array != null) {
-			Iterator<String> iter = array.iterator();
-			while (iter.hasNext()) {
-				sb.append(iter.next());
-				sb.append(separator);
+			for (String element : array) {
+				if (element != null && !element.isEmpty()) { // Skip null or empty elements if needed
+					sb.append(separator).append(element);
+				}
 			}
 		}
-		String retval = sb.toString();
-		if (retval.length() > 0) {
-			retval = retval.substring(0, retval.length() - 1);
+		String result = sb.toString();
+		// Strip leading separator if it exists
+		if (result.startsWith(separator)) {
+			result = result.substring(separator.length());
 		}
-		return retval;
+		return result;
 	}
 
-	public static String convertArraytoString(TreeSet<Integer> array, String separator) {
+	public static String convertArrayToString(TreeSet<Integer> array, String separator) {
 		StringBuilder sb = new StringBuilder();
 		if (array != null) {
 			Iterator<Integer> iter = array.iterator();
@@ -315,7 +310,7 @@ public class GlobalUtils {
 		return retval;
 	}
 
-	public static String convertArraytoString(Object[] array, String separator) {
+	public static String convertArrayToString(Object[] array, String separator) {
 		StringBuilder sb = new StringBuilder();
 		if (array != null) {
 			for (int i = 0; i < array.length; i++) {
@@ -335,7 +330,7 @@ public class GlobalUtils {
 		return sb.toString();
 	}
 
-	public static String convertArraytoString(String[] array, String separator) {
+	public static String convertArrayToString(String[] array, String separator) {
 		StringBuilder sb = new StringBuilder();
 		if (array != null) {
 			for (int i = 0; i < array.length; i++) {
@@ -355,7 +350,7 @@ public class GlobalUtils {
 		return sb.toString();
 	}
 
-	public static String convertArraytoString(List<Object> array, String separator) {
+	public static String convertArrayToString(List<Object> array, String separator) {
 		StringBuilder sb = new StringBuilder();
 		if (array != null) {
 			for (int i = 0; i < array.size(); i++) {
@@ -375,15 +370,15 @@ public class GlobalUtils {
 		return sb.toString();
 	}
 
-	public static String convertArraytoString(Collection<String> array) {
-		return (convertArraytoString(array, "|"));
+	public static String convertArrayToString(Collection<String> array) {
+		return (convertArrayToString(array, "|"));
 	}
 
-	public static String convertArraytoString(Object[] array) {
-		return (convertArraytoString(array, "|"));
+	public static String convertArrayToString(Object[] array) {
+		return (convertArrayToString(array, "|"));
 	}
 
-	public static String convertArraytoString(TreeMap<Integer, String> array) {
+	public static String convertArrayToString(TreeMap<Integer, String> array) {
 		StringBuilder sb = new StringBuilder();
 		if (array != null) {
 			for (Object key : array.keySet()) {
@@ -799,8 +794,24 @@ public class GlobalUtils {
 			for (String part : parts) {
 				camelCaseString = camelCaseString + " " + toProperCase(part);
 			}
+
+			camelCaseString = camelCaseString.replaceAll(s, camelCaseString);
+
 			camelCaseString = camelCaseString.trim();
-			return camelCaseString;
+
+			StringBuffer result = new StringBuffer();
+
+			// Define the regex pattern to match a "." or "-" followed by a lowercase letter
+			Pattern pattern = Pattern.compile("(?<=[-.])(\\p{L})");
+			Matcher matcher = pattern.matcher(camelCaseString);
+
+			// Use a loop to find matches and replace with uppercase
+			while (matcher.find()) {
+				matcher.appendReplacement(result, matcher.group().toUpperCase());
+			}
+			matcher.appendTail(result);
+
+			return result.toString();
 		} else {
 			return null;
 		}
@@ -859,7 +870,7 @@ public class GlobalUtils {
 
 	public static String prepareFileKey(String key) {
 		if (key == null) {
-			return "NA";
+			return null;
 		} else {
 
 			key = key.trim();
@@ -881,7 +892,7 @@ public class GlobalUtils {
 			return key;
 		}
 	}
-	
+
 	public static String cleanWord(String word) {
 		// Use StringBuilder for efficient string manipulation
 		StringBuilder cleanedWord = new StringBuilder();

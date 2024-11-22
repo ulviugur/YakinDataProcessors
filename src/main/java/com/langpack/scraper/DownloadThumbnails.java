@@ -16,7 +16,7 @@ import org.bson.Document;
 import com.langpack.common.ConfigReader;
 import com.langpack.datachannel.DataChannelFactory;
 import com.langpack.datachannel.UnknownDataChannelException;
-import com.langpack.process.MergeBooksData;
+import com.langpack.process.golddata.MergeBooksData;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
@@ -31,7 +31,6 @@ public class DownloadThumbnails {
 
 	String destFolderStr = null;
 	String booksCollStr = null;
-	String linksCollStr = null;
 
 	protected ConfigReader cfg = null;
 
@@ -49,7 +48,6 @@ public class DownloadThumbnails {
 	public DownloadThumbnails(String cfgFileName) throws UnknownDataChannelException {
 		cfg = new ConfigReader(cfgFileName);
 		destFolderStr = cfg.getValue("DestinationFolder");
-		linksCollStr = cfg.getValue("LinksCollection");
 		booksCollStr = cfg.getValue("BooksCollection");
 		mongoURL = cfg.getValue("MongoURL", "mongodb://localhost:27017");
 

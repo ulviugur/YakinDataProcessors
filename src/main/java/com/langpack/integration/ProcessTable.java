@@ -68,7 +68,7 @@ public class ProcessTable extends BasicClass {
 				try {
 					syls = SyllableBreaker.break2Syls(word);
 					if (syls.size() > 0) {
-						sylsString = GlobalUtils.convertArraytoString(syls, ".");
+						sylsString = GlobalUtils.convertArrayToString(syls, ".");
 						sylsString = sylsString.replace("._.", " ");
 						psUpdate1.setString(1, sylsString);
 						psUpdate1.setString(2, word);

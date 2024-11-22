@@ -210,7 +210,7 @@ public class SyllableBreaker {
 		// instance.saveWordListingDB();
 		// String value = SyllableBreaker.getMaxConsequentConsonants("adımlarından");
 		ArrayList<String> value = SyllableBreaker.break2Syls("Abaza peyniri");
-		System.out.println("Value = " + GlobalUtils.convertArraytoString(value, " | "));
+		System.out.println("Value = " + GlobalUtils.convertArrayToString(value, " | "));
 		// instance.breakUp("akil");
 	}
 }

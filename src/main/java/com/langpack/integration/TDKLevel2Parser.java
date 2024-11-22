@@ -240,7 +240,7 @@ public class TDKLevel2Parser extends Level2Parser {
 					}
 					try {
 						// log4j.info(meaning + " : <> .... " +
-						// GlobalUtils.convertArraytoString(meaningTypes));
+						// GlobalUtils.convertArrayToString(meaningTypes));
 						JSONArray sampleArray = (JSONArray) meaningItem.get("orneklerListe");
 						JSONObject sample = (JSONObject) sampleArray.get(0);
 						sampleText = sample.getString("ornek");
@@ -256,7 +256,7 @@ public class TDKLevel2Parser extends Level2Parser {
 					meaningTypes.add(dominantMeaningType);
 
 					TDKMeaningItem tmp = new TDKMeaningItem(word, Integer.toString(chCount + 1),
-							Integer.toString(meCount + 1), GlobalUtils.convertArraytoString(meaningTypes, ", "),
+							Integer.toString(meCount + 1), GlobalUtils.convertArrayToString(meaningTypes, ", "),
 							meaning, sampleText, authorText);
 					tmp.setLangCode(langCode);
 					tmp.setLangContent(langContent);
