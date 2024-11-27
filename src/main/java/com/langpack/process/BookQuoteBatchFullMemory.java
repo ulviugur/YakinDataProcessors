@@ -218,7 +218,7 @@ public class BookQuoteBatchFullMemory {
 					}
 				}
 				retval.append(" ");
-				retval.append(GlobalUtils.convertArraytoString(tokens, " "));
+				retval.append(GlobalUtils.convertArrayToString(tokens, " "));
 
 			} else {
 				retval.append(" ");

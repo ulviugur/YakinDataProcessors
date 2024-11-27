@@ -113,9 +113,30 @@ public class DownloadThumbnails {
 		}
 		log4j.info("Process completed after {} downloads ..", count);
 	}
+	public static Document processThumbnail (Document doc, File TNDestFolder) {
+		String thumbnailURL1 = (String) doc.get("thumbnailURL");
+		String thumbnailURL = thumbnailURL1.replace("size:96", "size:640");
 
+		String localFileName = MergeBooksData.makeLocalTNFilename(doc);
+		log4j.info(localFileName);
+		
+		File localFile = new File(TNDestFolder, localFileName);
 
-	public boolean downloadImage(String imageUrl, File destFile, boolean overwrite) {
+		if (localFile.exists()) {
+			// TN file already exists
+			return doc;
+		} else {			
+			log4j.info("Download URL {} and LocalFile : {}",  thumbnailURL, localFile.getAbsolutePath());
+			
+			boolean success = downloadImage(thumbnailURL, localFile, false);
+			if (success) {
+				doc.put("localTNFilename", localFileName);
+			}
+			return doc;
+		}
+	}
+
+	public static boolean downloadImage(String imageUrl, File destFile, boolean overwrite) {
 		Path destinationPath = null;
 
 		if (destFile.exists() && !overwrite) {

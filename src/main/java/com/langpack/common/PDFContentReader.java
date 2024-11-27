@@ -151,7 +151,7 @@ public class PDFContentReader {
 		
 		logger.info("Ended reading, ended with length {}. Now removing empty spaces.. ", textContent.length());
 		
-        String retval = StringProcessor.cleanBookString(textContent.toString());
+        String retval = StringProcessor.extractSTCFromText(textContent.toString());
         return retval; // Trim to remove any trailing new lines
 	}
 

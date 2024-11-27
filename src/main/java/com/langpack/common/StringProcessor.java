@@ -24,62 +24,65 @@ public class StringProcessor {
 
 	public static String SPECIAL_CHARS_REGEX = null;
 
-	public static String cleanBookString(String input) {
-		
-		//logger.info("Input : {}", input);
-
-		// Replace each period with a period followed by a single new line
-		String step1 = input.replaceAll("\\.", ".\n");
-		
-		//logger.info("step1 : {}", step1);
-
-		// Remove multiple new lines (replace sequences of new lines with a single new
-		// line)
-		String step2 = step1.replaceAll("\\n+", "\n");
-		
-		//logger.info("step2 : {}", step2);
-
-		// Trim leading spaces from each line and manage spaces at the beginning of
-		// lines
-		// Using a regex to match lines with leading spaces and trim them
-		String step3 = step2.replaceAll("(?m)^\\s+", "");
-		//logger.info("step3 : {}", step3);
-
-		// Optionally, remove trailing spaces at the end of each line
-		String step4 = step3.replaceAll("(?m)\\s+$", "");
-		//logger.info("step4 : {}", step4);
-
-		// Remove itemized lists
-		String step5 = step4.replaceAll("\\n\\.\\n|\\r\\n\\.\\r\\n", "");
-		//logger.info("step5 : {}", step5);
-
-		// Remove multiple spaces
-		String step6 = step5.replaceAll("\\s+", " ");
-		//logger.info("step6 : {}", step6);
-
-		// remove all non.printable characters
-		String regex = "[\\x00-\\x1F\\x7F]";
-		String step7 = step6.replaceAll(regex, " ");
-		//logger.info("step7 : {}", step7);
-
-		String step8 = step7.replaceAll("\\u00AD", "");
-		//logger.info("step8 : {}", step8);
-		
-		String step9 = step8.replaceAll("\\s*,", ", ");
-		//logger.info("step9 : {}", step9);
-		
-		String step10 = step9.replaceAll("“\\s+", "“");
-		//logger.info("step10 : {}", step10);
-		
-		String step11 = step10.replaceAll("\\s+”", "”");
-		//logger.info("step11 : {}", step11);
-		
-		String step12 = step11.replaceAll("(?<=[a-zçğıöşü])(?=[A-ZÇĞİÖŞÜ])", " ").trim();
-		
-		String step13 = step12.replaceAll("\\s+", " ");
-				
-		return step13;
-	}
+	// Replaced with the below extractSTCFromText() method
+//	public static String cleanBookString(String input) {
+//		
+//		//logger.info("Input : {}", input);
+//
+//		// Replace each period with a period followed by a single new line
+//		String step1 = input.replaceAll("\\.", ".\n");
+//		
+//		//logger.info("step1 : {}", step1);
+//
+//		// Remove multiple new lines (replace sequences of new lines with a single new
+//		// line)
+//		String step2 = step1.replaceAll("\\n+", "\n");
+//		
+//		//logger.info("step2 : {}", step2);
+//
+//		// Trim leading spaces from each line and manage spaces at the beginning of
+//		// lines
+//		// Using a regex to match lines with leading spaces and trim them
+//		String step3 = step2.replaceAll("(?m)^\\s+", "");
+//		//logger.info("step3 : {}", step3);
+//
+//		// Optionally, remove trailing spaces at the end of each line
+//		String step4 = step3.replaceAll("(?m)\\s+$", "");
+//		//logger.info("step4 : {}", step4);
+//
+//		// Remove itemized lists
+//		String step5 = step4.replaceAll("\\n\\.\\n|\\r\\n\\.\\r\\n", "");
+//		//logger.info("step5 : {}", step5);
+//
+//		// Remove multiple spaces
+//		//logger.info("step6 : {}", step6);
+//
+//		// remove all non.printable characters
+//		String regex = "[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]";
+//		String step7 = step5.replaceAll(regex, " ");
+//		//logger.info("step7 : {}", step7);
+//
+//		String step8 = step7.replaceAll("\\u00AD", "");
+//		//logger.info("step8 : {}", step8);
+//		
+//		String step9 = step8.replaceAll("\\s*,", ", ");
+//		//logger.info("step9 : {}", step9);
+//		
+//		String step10 = step9.replaceAll("“\\s+", "“");
+//		//logger.info("step10 : {}", step10);
+//		
+//		String step11 = step10.replaceAll("\\s+”", "”");
+//		//logger.info("step11 : {}", step11);
+//		
+//		String step12 = step11.replaceAll("(?<=[a-zçğıöşü])(?=[A-ZÇĞİÖŞÜ])", " ").trim();
+//		
+//		String step13 = step12.replaceAll("“", " “");
+//		String step14 = step13.replaceAll("”", "”\n");
+//		
+//		String step15 = step14.replaceAll("  ", " ");
+//				
+//		return step15;
+//	}
 
 	public static HashSet<String> convertToKeywords(String input) {
 
@@ -243,7 +246,7 @@ public class StringProcessor {
 		String step5 = step4.replace("…","\r\n");
 		
         Pattern pattern1 = Pattern.compile("\\(([^)]*)\\)");
-        Matcher matcher1 = pattern1.matcher(step4);
+        Matcher matcher1 = pattern1.matcher(step5);
 
         StringBuffer result1 = new StringBuffer();
 
@@ -280,9 +283,12 @@ public class StringProcessor {
             }
         }
 
-        String result = modifiedText.toString();
+        String step10 = modifiedText.toString();
+		//String step10 = pretext.replaceAll("”", "”\r\n");
+		String step11 = step10.replaceAll("\r\n\r\n", "\r\n");
+		//String step11 = step10.replaceAll("\\n\\r\\n", "\\r\\n");
 
-        return result;
+        return step11;
        
 	}
 }
