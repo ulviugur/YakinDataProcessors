@@ -10,6 +10,9 @@ import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.text.Normalizer;
 import java.text.SimpleDateFormat;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,6 +54,33 @@ public class GlobalUtils {
 
 	public static final Logger log4j = LogManager.getLogger("GlobalUtils");
 	public static DecimalFormat COORDS_FORMATTER = new DecimalFormat("##0.000000");
+	
+	public static String getYearFromString(String date) {
+		if (date == null) {
+			return "0";
+		}
+		
+        String yearRegex = "\\b(\\d{4})\\b";
+        Pattern yearPattern = Pattern.compile(yearRegex);
+
+        // Match the pattern in the text
+        Matcher matcher = yearPattern.matcher(date);
+
+        // Find and print all matching years
+        String year = null;
+        while (matcher.find()) {
+            year = matcher.group(1); // Capture the first group
+            break;
+        }
+        return year;
+	}
+	
+	public static String getCurrentTimeInString() {
+        ZonedDateTime zonedTime = ZonedDateTime.now(ZoneId.of("Europe/Berlin"));
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
+        String formattedTime = zonedTime.format(formatter);
+        return formattedTime;
+	}
 
 	public static ArrayList<File> checkDirectory(String dirname, ArrayList<String> extlist) {
 		ArrayList<File> retval = new ArrayList<>();

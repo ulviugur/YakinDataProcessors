@@ -12,6 +12,7 @@ public class LibraryBookItem {
 	private String keysCombi;
 	private String scrapeURL;
 	private String bookName;
+	private String subtitle;
 	private String author;
 	private String thumbnailURL;
 	

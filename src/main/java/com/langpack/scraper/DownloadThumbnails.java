@@ -118,7 +118,7 @@ public class DownloadThumbnails {
 		String thumbnailURL = thumbnailURL1.replace("size:96", "size:640");
 
 		String localFileName = MergeBooksData.makeLocalTNFilename(doc);
-		log4j.info(localFileName);
+		//log4j.info(localFileName);
 		
 		File localFile = new File(TNDestFolder, localFileName);
 
