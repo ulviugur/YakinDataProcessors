@@ -76,8 +76,7 @@ public class ChromeHeadless {
 		driver.get(url);
 
 	}
-
-
+	
 	public String getPageSource() {
 		String pageSource = driver.getPageSource();
 		return pageSource;

@@ -897,6 +897,24 @@ public class GlobalUtils {
 
 		return subdoc;
 	}
+	
+	// Only used with book metadata objects
+	public static String getBookMetadataValue(org.bson.Document doc, String fieldName) {
+		String retval = null;
+		Object fieldObject = doc.get(fieldName);
+		if (fieldObject != null) {
+			ArrayList<String> fieldObject2 = (ArrayList<String>)fieldObject;
+			ArrayList<String> valueArray = fieldObject2;
+			if (valueArray == null || valueArray.size() == 0) {
+				retval = null;
+			} else {
+				retval = valueArray.get(0);
+			}
+		} else {
+			// field in not in the object, should return null
+		}
+		return retval;
+	}
 
 	public static String prepareFileKey(String key) {
 		if (key == null) {

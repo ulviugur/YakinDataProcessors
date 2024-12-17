@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -14,9 +15,17 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.bson.Document;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 import com.langpack.common.ConfigReader;
 import com.langpack.common.GlobalUtils;
@@ -127,6 +136,10 @@ public class BinBooksScraper implements BookScraper {
 //	}
 
 	public Document scrapeBookData(String scrapeURL, String bookName, String author, Integer index) {
+		WebDriver driver = myChrome.driver;
+		
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        
 		org.bson.Document newDocument = null; // new org.bson.Document();
 		String keysCombi = bookName + "#" + author;
 		String page = null;
@@ -138,14 +151,22 @@ public class BinBooksScraper implements BookScraper {
 		} catch (Exception ex) {
 			return null;
 		}
+
+        // Wait for the button containing the text to become visible
+		WebElement buttonElement = wait.until(ExpectedConditions
+				.visibilityOfElementLocated(By.xpath("//button[.//span[text()='Bütün basım bilgilerini göster']]")));
+
+		buttonElement.click();
 		
 		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			page = myChrome.getPageSource();
+			if (page == null) {
+				return null;
+			}
+		} catch (Exception ex) {
+			return null;
 		}
-
+		
 		String linkImage = null;
 		String qStringButton = String.format("dr whk-15 overflow-hidden cursor");
 
@@ -162,33 +183,50 @@ public class BinBooksScraper implements BookScraper {
 			Element imgElement = imgdoc.selectFirst("img");
 			linkImage = imgElement.attr("src");
 		}
+				
 		org.jsoup.nodes.Document doc = Jsoup.parse(page);
-		Element dataDiv = doc.selectFirst("div.dr.flex-row.flex-wrap.gap-1_5");
+		// Element dataDiv = doc.selectFirst("div.dr.flex-row.flex-wrap.gap-1_5");
+		//Element dataDiv = doc.selectFirst("div.dr.md-\\:ph-4.pt-2.gap-3.pb-safe.overflow-hidden");
+		   Element dataDiv = doc.selectFirst("div[class*='md-:ph-4'][class*='pt-2'][class*='gap-3'][class*='pb-safe'][class*='overflow-hidden']");
+
 		Element divBookName = doc.selectFirst("h1.text.font-bold.truncate.text-20");
 		Element divSubtitle = doc.selectFirst("h2.text.font-medium.text-silik.truncate.text-15");
+		Element divAuthor = doc.selectFirst("a[href*='/yazar/']");
 
 		if (dataDiv == null) {
 			log4j.error("Data block not found at URL : {}!", scrapeURL);
 			return null;
 		} else {
-			Element divAuthor = dataDiv.selectFirst("span.text.text-mavi.text-14");
+			//Element divAuthor = dataDiv.selectFirst("span.text.text-mavi.text-14");
 
-			Elements divElements = dataDiv.select("span.text.text-14.mr-3");
+			// Elements divElements = doc.select("div.dr.flex-row.gap-2");
 
+//			for (Iterator<Element> iterator = divElements.iterator(); iterator.hasNext();) {
+//				Element element = (Element) iterator.next();
+//				Elements labelElements = element.select("span.text.text-silik-v2.truncate.text-14");
+//				Element label = labelElements.get(0);
+//				String cleanLabel = label.text().replace(":", "");
+//				
+//				Elements valueElements = element.select("span.text.text-mavi.text-14");
+//				Element valueSpan = valueElements.get(0);
+//				String value = valueSpan.text();
+//				
+//				attrDoc.append(cleanLabel, value);
+//			}
+			
 			org.bson.Document attrDoc = new org.bson.Document();
-			for (Iterator<Element> iterator = divElements.iterator(); iterator.hasNext();) {
-				Element element = (Element) iterator.next();
-				Elements attrElements = element.select(".text-alt");
-				Element label = attrElements.get(0);
-				String cleanLabel = label.text().replace(":", "");
-				Element value = attrElements.get(1);
-				attrDoc.append(cleanLabel, value.text());
-
+			
+			Element spanElement = doc.selectFirst("span:contains(Basım Bilgileri)");
+			if (spanElement != null) {
+	            // Find the parent element of the <span>
+	            Element parentElement = spanElement.parent().parent().parent();
+				Elements divElements2 = parentElement.select("div.dr.flex-row.gap-2");
+				attrDoc = getKeyValueMatrix(divElements2);
 			}
 
 			String jsonData = attrDoc.toJson();
-			String publisherVerified = attrDoc.getString("Publisher");
-			String publishYearVerified = attrDoc.getString("First Publication Date");
+			String publisherVerified = GlobalUtils.getBookMetadataValue(attrDoc, "Yayınevi");
+			String publishYearVerified = GlobalUtils.getBookMetadataValue(attrDoc, "İlk Yayın Tarihi");
 			String authorVerified = divAuthor.text();
 			String bookNameVerified = divBookName.text();
 			String subtitle = "";
@@ -201,8 +239,8 @@ public class BinBooksScraper implements BookScraper {
 			bookItem.setBookName(bookNameVerified);
 			bookItem.setSubtitle(subtitle);
 			bookItem.setKeysCombi(keysCombi); // OK
-			bookItem.setPublisher(publisherVerified); // OK
-			bookItem.setPublishYear(publishYearVerified); // OK
+			bookItem.setPublisher(publisherVerified.toString()); // OK
+			bookItem.setPublishYear(publishYearVerified.toString()); // OK
 			bookItem.setIndex(index); // OK
 			bookItem.setScrapeURL(scrapeURL); // OK
 			bookItem.setThumbnailURL(linkImage); // OK
@@ -221,6 +259,50 @@ public class BinBooksScraper implements BookScraper {
 			return newDocument;
 		}
 	}
+	private Document getKeyValueMatrix(Elements dataElements) {
+		org.bson.Document retval = new org.bson.Document();
+		for (Iterator<Element> iterator = dataElements.iterator(); iterator.hasNext();) {
+			Element element = (Element) iterator.next();
+			Elements labelElements = element.select("span.text.text-silik-v2.truncate.text-14");
+			if (labelElements.size()>0) {
+				Element label = labelElements.get(0);
+				String cleanLabel = label.text().replace(":", "");
+				log4j.info("Label = {}", cleanLabel);
+				
+				// either with additional links (in blue)
+				Elements valueElements = element.select("span.text.text-mavi.text-14");
+				if ( valueElements == null || valueElements.isEmpty()) {
+					// or just data elements
+					valueElements = element.select("div.dr.flex-1 > span.text.text-14");
+				}
+				ArrayList<String> values = collectValues(valueElements);
+				if (valueElements.size() > 0) {
+					retval.append(cleanLabel, values);
+				} else {
+					log4j.info("Content for {} label is empty :/", cleanLabel);
+				}
+			}
+
+		}
+		return retval;
+	}
+	private ArrayList<String>  collectValues(Elements items) {
+	    // Initialize a Document object to hold the data
+	    Document result = new Document();
+
+	    // Initialize an ArrayList to store collected values
+	    ArrayList<String> valuesList = new ArrayList<>();
+
+	    // Iterate over the items
+	    for (Element valElement : items) {
+	        String value = valElement.text();
+	        valuesList.add(value); // Add each value to the list
+	    }
+
+	    // Add the list to the Document under a key, e.g., "values"
+	    return valuesList;
+	}
+
 
 	public Document collectBookLinks (String bookName, String author) {
 		ArrayList<String> links = new ArrayList<String>();

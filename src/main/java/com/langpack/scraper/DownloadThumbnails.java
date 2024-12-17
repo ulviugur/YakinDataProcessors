@@ -27,92 +27,8 @@ import com.mongodb.client.result.UpdateResult;
 
 public class DownloadThumbnails {
 
-	public static final Logger log4j = LogManager.getLogger("DNRBooksLookup");
+	public static final Logger log4j = LogManager.getLogger("DownloadThumbnails");
 
-	String destFolderStr = null;
-	String booksCollStr = null;
-
-	protected ConfigReader cfg = null;
-
-	ArrayList<String> bookKeys = new ArrayList<String>();
-
-	String mongoURL = null;
-	MongoCollection<Document> booksColl = null;
-	// MongoCollection<Document> linksColl = null;
-	
-	MongoDatabase database = null;
-	MongoClient mongoClient = null;
-
-	// HashSet<String> existingKeys = new HashSet<String>();
-
-	public DownloadThumbnails(String cfgFileName) throws UnknownDataChannelException {
-		cfg = new ConfigReader(cfgFileName);
-		destFolderStr = cfg.getValue("DestinationFolder");
-		booksCollStr = cfg.getValue("BooksCollection");
-		mongoURL = cfg.getValue("MongoURL", "mongodb://localhost:27017");
-
-		DataChannelFactory.initialize(cfgFileName);
-
-		mongoClient = MongoClients.create(mongoURL);
-		database = mongoClient.getDatabase("test");
-		
-		booksColl = database.getCollection(booksCollStr);
-		// linksColl = database.getCollection(linksCollStr);
-	}
-
-	public void process() {
-		int runfor = 11000;
-		// Run the find() query with the filter
-		MongoIterable<Document> result = booksColl.find();
-
-		// Iterate over the results
-		MongoCursor<Document> cursor = result.iterator();
-		int count = 0;
-		try {
-			while (cursor.hasNext()) {
-
-				Document doc = cursor.next();
-				log4j.info("[{}] Running for {}", count, doc);
-
-				String thumbnailURL1 = (String) doc.get("thumbnailURL");
-				String thumbnailURL = thumbnailURL1.replace("size:96", "size:640");
-
-				String localFileName = MergeBooksData.makeLocalTNFilename(doc);
-				
-				File localFile = new File(destFolderStr, localFileName);
-				log4j.info("[{}] Download URL {} and LocalFile : {}", count, thumbnailURL, localFile.getAbsolutePath());
-
-				String currLocalTNFilename = doc.getString("localTNFilename");
-				if (localFileName.equals(currLocalTNFilename)) {
-					// filename already updated
-				} else {
-					// create TN field
-					Document tnField = new Document("localTNFilename", localFileName);
-				    Document updateQuery = new Document("$set", tnField);
-
-				    // use a filter to get the book document to be update - which is actually the same doc
-					Document filter = new Document("_id", doc.get("_id"));
-				    UpdateResult res = booksColl.updateOne(filter, updateQuery);
-				    log4j.info("Modify {} documents : ", res.getModifiedCount());
-				    
-				}
-								
-				boolean success = downloadImage(thumbnailURL, localFile, false);
-
-				count++;
-				runfor--;
-				if (runfor == 0) {
-					break;
-				}
-
-			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		} finally {
-			cursor.close();
-		}
-		log4j.info("Process completed after {} downloads ..", count);
-	}
 	public static Document processThumbnail (Document doc, File TNDestFolder) {
 		String thumbnailURL1 = (String) doc.get("thumbnailURL");
 		String thumbnailURL = thumbnailURL1.replace("size:96", "size:640");
@@ -136,7 +52,7 @@ public class DownloadThumbnails {
 		}
 	}
 
-	public static boolean downloadImage(String imageUrl, File destFile, boolean overwrite) {
+	private static boolean downloadImage(String imageUrl, File destFile, boolean overwrite) {
 		Path destinationPath = null;
 
 		if (destFile.exists() && !overwrite) {
@@ -167,22 +83,6 @@ public class DownloadThumbnails {
 			log4j.info("Failed to download image {} to {}", imageUrl, destFile.getAbsolutePath());
 			return false;
 		}
-
-	}
-
-	public static void main(String[] args) {
-		System.out.println("classpath=" + System.getProperty("java.class.path"));
-
-		DownloadThumbnails instance;
-		try {
-			instance = new DownloadThumbnails(args[0]);
-			instance.process();
-
-		} catch (UnknownDataChannelException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		// instance.scrapeContent();
 
 	}
 

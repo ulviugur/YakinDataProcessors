@@ -36,6 +36,8 @@ import com.langpack.common.EPUBContentReader;
 import com.langpack.common.FileExporter;
 import com.langpack.common.GlobalUtils;
 import com.langpack.common.LevensteinIndex;
+import com.langpack.model.LibraryBookItem;
+import com.langpack.model.PendingBookItem;
 import com.langpack.scraper.BinBooksScraper;
 import com.langpack.scraper.BookScraper;
 import com.langpack.scraper.DNRBooksScraper;
@@ -49,7 +51,7 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.UpdateOptions;
 
-public class BookDataConsolidator {
+public class BookDataConsolidator2 {
 
 	public static final Logger log4j = LogManager.getLogger("BookDataConsolidator");
 
@@ -100,11 +102,13 @@ public class BookDataConsolidator {
 
 	Integer bestBookNameColumnNumber;
 	Integer bestAuthorColumnNumber;
+
 	Integer finalBookNameColumnNumber;
 	Integer finalAuthorColumnNumber;
-	
-	Integer processedColumnNumber;
+
 	Integer foundBookColumnNumber;
+
+	Integer processedColumnNumber;
 	Integer EPUBFilenameColumnNumber;
 	Integer STCFilenameColumnNumber;
 	Integer skipLines;
@@ -114,7 +118,6 @@ public class BookDataConsolidator {
 	Boolean overwriteSTCFiles = false;
 	Boolean forceScrapeData = false;
 
-	XSSFCellStyle styleNormal = null;
 	XSSFCellStyle styleChanged = null;
 	XSSFCellStyle styleUnknown = null;
 
@@ -133,7 +136,7 @@ public class BookDataConsolidator {
 	// database (runSheet()). This has to be running after each update on the work
 	// sheet to organise and capture data
 
-	public BookDataConsolidator(String cfgFileName) {
+	public BookDataConsolidator2(String cfgFileName) {
 		cfg = new ConfigReader(cfgFileName);
 
 		sourceFileStr = cfg.getValue("BooksFile");
@@ -215,9 +218,10 @@ public class BookDataConsolidator {
 
 		bestBookNameColumnNumber = Integer.parseInt(cfg.getValue("Field.BestBookNameColumnNumber", "5"));
 		bestAuthorColumnNumber = Integer.parseInt(cfg.getValue("Field.BestAuthorColumnNumber", "6"));
-		finalBookNameColumnNumber = Integer.parseInt(cfg.getValue("Field.FinalBookNameColumnNumber", "7"));
+
+		finalBookNameColumnNumber = Integer.parseInt(cfg.getValue("Field.FinalNameColumnNumber", "7"));
 		finalAuthorColumnNumber = Integer.parseInt(cfg.getValue("Field.FinalAuthorColumnNumber", "8"));
-		
+
 		processedColumnNumber = Integer.parseInt(cfg.getValue("Field.ProcessedColumnNumber", "9"));
 		foundBookColumnNumber = Integer.parseInt(cfg.getValue("Field.FoundBookColumnNumber", "10"));
 		EPUBFilenameColumnNumber = Integer.parseInt(cfg.getValue("Field.EPUBFilenameColumnNumber", "11"));
@@ -238,10 +242,6 @@ public class BookDataConsolidator {
 			System.exit(-1);
 		}
 
-		styleNormal = wb.createCellStyle();
-		styleNormal.setFillForegroundColor(IndexedColors.WHITE.getIndex());
-		styleNormal.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-		
 		styleChanged = wb.createCellStyle();
 		styleChanged.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
 		styleChanged.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -271,20 +271,35 @@ public class BookDataConsolidator {
 		try {
 			XSSFRow rowObject = null;
 			while ((rowObject = (XSSFRow) pendingsSheet.getRow(rowCount)) != null) {
-				
-				boolean confirmedBooknameWasReady = false;
+
+				PendingBookItem book = new PendingBookItem();
 
 				Cell celloriFilename = rowObject.getCell(oriFilenameColumnNumber);
-				String oriFilename = GlobalUtils.getCellContentAsString(celloriFilename); // EPUB original filename
+				book.setOriFileName(GlobalUtils.getCellContentAsString(celloriFilename)); // EPUB original filename
 
+				// BOF - ORI ====================================================
 				Cell cellOriBookName = rowObject.getCell(oriBookNameColumnNumber);
-				String oriBookName = GlobalUtils.getCellContentAsString(cellOriBookName);
+				book.setOriBookname(GlobalUtils.getCellContentAsString(cellOriBookName));
 
+				Cell cellOriAuthor = rowObject.getCell(oriAuthorColumnNumber);
+				book.setOriAuthor(GlobalUtils.getCellContentAsString(cellOriAuthor));
+				// EOF - ORI ====================================================
+
+				// BOF - BEST ====================================================
 				Cell cellBestBookName = rowObject.getCell(bestBookNameColumnNumber);
-				String currBestBookName = GlobalUtils.getCellContentAsString(cellBestBookName);
+				book.setBestBookName(GlobalUtils.getCellContentAsString(cellBestBookName));
 
-				Cell cellAuthor = rowObject.getCell(bestAuthorColumnNumber);
-				String fullAuthor = GlobalUtils.getCellContentAsString(cellAuthor);
+				Cell cellBestAuthor = rowObject.getCell(bestAuthorColumnNumber);
+				book.setBestAuthor(GlobalUtils.getCellContentAsString(cellBestAuthor));
+				// EOF - BEST ====================================================
+
+				// BOF - FINAL ====================================================
+				Cell cellFinalBookName = rowObject.getCell(finalBookNameColumnNumber);
+				book.setFinalBookName(GlobalUtils.getCellContentAsString(cellFinalBookName));
+
+				Cell cellFinalAuthor = rowObject.getCell(finalAuthorColumnNumber);
+				book.setFinalAuthor(GlobalUtils.getCellContentAsString(cellFinalAuthor));
+				// BOF - FINAL ====================================================
 
 				Cell cellProcessed = rowObject.getCell(processedColumnNumber);
 				String processed = GlobalUtils.getCellContentAsString(cellProcessed);
@@ -293,64 +308,61 @@ public class BookDataConsolidator {
 				String key = GlobalUtils.getCellContentAsString(cellKey);
 
 				if ("Y".equals(processed)) {
-					log4j.info("[{}] Skipping {}#{} as it was already processed .. ", rowCount, oriBookName,
-							fullAuthor);
+					log4j.info("[{}] Skipping {}#{} as it was already processed .. ", rowCount, book.getBestBookName(),
+							book.getBestAuthor());
 					rowCount++;
 					continue;
-				} else if (fullAuthor.contains("ignore")) {
-					log4j.info("[{}] Skipping {}#{} as it should be ignored .. ", rowCount, currBestBookName, fullAuthor);
+				} else if (book.getBestAuthor().contains("ignore")) {
+					log4j.info("[{}] Skipping {}#{} as it should be ignored .. ", rowCount, book.getBestAuthor(), book.getBestAuthor());
 					rowCount++;
 					continue;
 				} else {
-					HashSet<String> bookNamesList = new HashSet<String>();
-					ArrayList<Document> scrapedData = checkScrapedLibBooks(currBestBookName, fullAuthor);
+					if ("".equals(book.getBestBookName())) {
+						HashSet<String> bookNamesList = new HashSet<String>();
+						ArrayList<Document> scrapedData = checkScrapedLibBooks(book.getOriBookname(), book.getOriAuthor());
 
-					if (scrapedData != null && scrapedData.size() > 0 && !forceScrapeData) { // if already available and not forced to scrape, use the existing data
-						log4j.info("Skipping to scrape {}#{} as they already exist .. ", currBestBookName, fullAuthor);
-						for (Iterator<Document> iterator = scrapedData.iterator(); iterator.hasNext();) {
-							Document tmpDoc = (Document) iterator.next();
-							String name = (String) tmpDoc.get("bookName");
-							bookNamesList.add(name);
-						}
-					} else {
-						log4j.info("Scraping book data [ForceScrapeData={}] {}#{} .. ", forceScrapeData, currBestBookName, fullAuthor);
-
-						HashSet<String> bookList1 = runScraper(binBooksScraper, key, currBestBookName, fullAuthor);
-						HashSet<String> bookList2 = runScraper(dNRBooksScraper, key, currBestBookName, fullAuthor);
-
-						bookNamesList.addAll(bookList1);
-						bookNamesList.addAll(bookList2);
-					}
-
-					String bestBookName = null;
-
-					int diffToName = 100;
-					Iterator<String> iter = bookNamesList.iterator();
-					while (iter.hasNext()) {
-						String itemName = iter.next();
-						int dist = LevensteinIndex.distance(itemName, currBestBookName);
-						if (dist < diffToName) {
-							bestBookName = itemName;
-							diffToName = dist;
-						}
-					}
-					cellBestBookName = rowObject.createCell(bestBookNameColumnNumber);
-					// if BestBookName is different than the original bookname, mark it as changed
-					if (bestBookName != null) {
-						if (bestBookName.equals(oriBookName)) {
-							// Best situation, original book names is the same as the scraped best name
-							// i.e. Final book name is found
-							cellBestBookName.setCellStyle(styleNormal);
-							XSSFCell cellFinalBookName = rowObject.createCell(finalBookNameColumnNumber);
-							cellFinalBookName.setCellValue(bestBookName);
+						if (scrapedData != null && scrapedData.size() > 0 && forceScrapeData) { // if already available
+																								// and
+																								// not forced to scrape,
+																								// use
+																								// the existing data
+							log4j.info("Skipping to scrape {}#{} as they already exist .. ", book.getOriBookname(), book.getOriAuthor());
+							for (Iterator<Document> iterator = scrapedData.iterator(); iterator.hasNext();) {
+								Document tmpDoc = (Document) iterator.next();
+								String name = (String) tmpDoc.get("bookName");
+								bookNamesList.add(name);
+							}
 						} else {
-							cellBestBookName.setCellStyle(styleChanged);
-						}
-						cellBestBookName.setCellValue(bestBookName);
-					}
+							log4j.info("Scraping book data [ForceScrapeData={}] {}#{} .. ", forceScrapeData,
+									book.getOriBookname(), book.getOriAuthor());
 
-					cellProcessed = rowObject.createCell(processedColumnNumber);
-					cellProcessed.setCellValue("Y");
+							HashSet<String> bookList1 = runScraper(binBooksScraper, key, book.getOriBookname(), book.getOriAuthor());
+							HashSet<String> bookList2 = runScraper(dNRBooksScraper, key, book.getOriBookname(), book.getOriAuthor());
+
+							bookNamesList.addAll(bookList1);
+							bookNamesList.addAll(bookList2);
+						}
+
+						int diffToName = 100;
+						String bestBookName = "ZZZZZZZZZZZZZZZZZZZZZZZZZZ";
+						Iterator<String> iter = bookNamesList.iterator();
+						while (iter.hasNext()) {
+							String itemName = iter.next();
+							int dist = LevensteinIndex.distance(itemName, bestBookName);
+							if (dist < diffToName) {
+								bestBookName = itemName;
+								diffToName = dist;
+							}
+						}
+						
+						cellBestBookName.setCellStyle(styleChanged); // Originally was not confirmed, updated now
+						
+						cellBestBookName = rowObject.createCell(bestBookNameColumnNumber);
+						cellBestBookName.setCellValue(bestBookName);
+
+						cellProcessed = rowObject.createCell(processedColumnNumber);
+						cellProcessed.setCellValue("Y");
+					}
 
 					// *************** Decision : Pending sheet can be only processed to find the
 					// best BookName
@@ -547,122 +559,85 @@ public class BookDataConsolidator {
 	// - Update the cells with the filenames (NewFilename (J column) and STCName (K
 	// column)
 	// - Update the index records in Mongo.BookIndex collection
-	public void updateIndexRecords() {
+	public void updateIndexRecord(PendingBookItem book, XSSFRow newRow) {
+
 		log4j.info("Started updateIndexRecords()");
-		int rowNumber = 0;
 
-		rowNumber++;
+		File srcFile = findMatchingFile(book.getOriFileName());
 
-		XSSFRow rowObject = null;
-		while ((rowObject = (XSSFRow) indexSheet.getRow(rowNumber)) != null) {
+		File dstFile = null;
+		File stcFile = null;
 
-			XSSFCell cellOrifilename = rowObject.getCell(0);
-			String oriFileName = GlobalUtils.getCellContentAsString(cellOrifilename);
+		String newEPUBFileName = null;
+		String newSTCFileName = null;
 
-			XSSFCell cellCleanFilenameColumnNumber = rowObject.getCell(cleanFilenameColumnNumber);
-			String cleanFileName = GlobalUtils.getCellContentAsString(cellCleanFilenameColumnNumber);
+		if ("Y".equals(book.getFound())) {
 
-			XSSFCell cellKey = rowObject.getCell(keyColumnNumber);
-			String key = GlobalUtils.getCellContentAsString(cellKey);
+			newEPUBFileName = formNewFileName(book.getKey(), book.getFinalBookName(), book.getFinalAuthor(), "epub");
+			newSTCFileName = formNewFileName(book.getKey(), book.getFinalBookName(), book.getFinalAuthor(),  "stc");
 
-			XSSFCell cellOriBookname = rowObject.getCell(oriBookNameColumnNumber);
-			String oriBookname = GlobalUtils.getCellContentAsString(cellOriBookname);
-
-			XSSFCell cellOriAuthor = rowObject.getCell(oriAuthorColumnNumber);
-			String oriAuthor = GlobalUtils.getCellContentAsString(cellOriAuthor);
-
-			XSSFCell cellBookname = rowObject.getCell(bestBookNameColumnNumber);
-			String bookName = GlobalUtils.getCellContentAsString(cellBookname);
-
-			XSSFCell cellAuthor = rowObject.getCell(bestAuthorColumnNumber);
-			String author = GlobalUtils.getCellContentAsString(cellAuthor);
-
-			XSSFCell cellProcessed = rowObject.getCell(processedColumnNumber);
-			String processed = GlobalUtils.getCellContentAsString(cellProcessed);
-
-			XSSFCell cellFound = rowObject.getCell(foundBookColumnNumber);
-			String found = GlobalUtils.getCellContentAsString(cellFound);
-
-			File srcFile = findMatchingFile(oriFileName);
-
-			File dstFile = null;
-			File stcFile = null;
-
-			String newEPUBFileName = null;
-			String newSTCFileName = null;
-
-			log4j.info("[{}] : {} -> {}", rowNumber, key, bookName);
-
-			if ("Y".equals(processed) && "Y".equals(found)) {
-
-				newEPUBFileName = formNewFileName(key.toString(), bookName, author, "epub");
-				newSTCFileName = formNewFileName(key.toString(), bookName, author, "stc");
-
-				try {
-					dstFile = new File(newEPUBDir, newEPUBFileName);
-					stcFile = new File(newSTCDir, newSTCFileName);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-
-				Path srcPath = Paths.get(srcFile.getAbsolutePath());
-				Path dstPath = Paths.get(dstFile.getAbsolutePath());
-
-				try { // Move the file to the target directory with a new name
-					if (!dstFile.exists() && copyNewEPUBFiles) { // if the file already exists, dont copy again
-						Path newFilePath = Files.copy(srcPath, dstPath, StandardCopyOption.REPLACE_EXISTING);
-					}
-					// log4j.info("Copy successful !! {} => {}", srcFile.getAbsolutePath(),
-					// dstFile.getAbsolutePath());
-					// if result is not null, it worked successfully !!
-
-					createSTCFile(dstFile, stcFile, overwriteSTCFiles);
-				} catch (Exception e) {
-					System.err.println("Error occurred while copying the file: " + e.getMessage());
-					e.printStackTrace();
-				}
-
+			try {
+				dstFile = new File(newEPUBDir, newEPUBFileName);
+				stcFile = new File(newSTCDir, newSTCFileName);
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 
-			XSSFCell cellEPUBFile = null;
-			XSSFCell cellSTCFile = null;
+			Path srcPath = Paths.get(srcFile.getAbsolutePath());
+			Path dstPath = Paths.get(dstFile.getAbsolutePath());
 
-			if (stcFile.exists()) { // only if all of the happy paths could be followed
-				XSSFRow newRow = indexSheet.getRow(rowNumber);
-				cellEPUBFile = newRow.createCell(EPUBFilenameColumnNumber);
-				cellSTCFile = newRow.createCell(STCFilenameColumnNumber);
-				cellEPUBFile.setCellValue(newEPUBFileName);
-				cellSTCFile.setCellValue(stcFile.getName());
-
-				Document doc = new Document().append("EPUB_OriFilename", oriFileName)
-						.append("EPUB_CleanFilename", cleanFileName).append("key", key)
-						.append("oriBookname", oriBookname).append("oriAuthor", oriAuthor)
-						.append("correctedBookname", bookName).append("correctedAuthor", author)
-						.append("newEPUBFilename", newEPUBFileName).append("STCFilename", stcFile.getName())
-						.append("updateTime", GlobalUtils.getCurrentTimeInString());
-
-				Document updateInst = new Document("$set", doc);
-
-				Document filter = new Document();
-				filter.put("key", key);
-				Document existingDoc = bookIndexColl.find(filter).first();
-				if (existingDoc != null) {
-					boolean result = docsEqual(existingDoc, doc);
-					if (result != true) { // significant change
-						bookIndexColl.updateOne(filter, updateInst, new UpdateOptions().upsert(true));
-					}
-				} else {
-					bookIndexColl.insertOne(doc);
+			try { // Move the file to the target directory with a new name
+				if (!dstFile.exists() && copyNewEPUBFiles) { // if the file already exists, dont copy again
+					Path newFilePath = Files.copy(srcPath, dstPath, StandardCopyOption.REPLACE_EXISTING);
 				}
+				createSTCFile(dstFile, stcFile, overwriteSTCFiles);
+			} catch (Exception e) {
+				System.err.println("Error occurred while copying the file: " + e.getMessage());
+				e.printStackTrace();
 			}
 
-			rowNumber++;
-			if (rowNumber > PROCESS_MAX) {
-				break;
+		}
+
+		XSSFCell cellEPUBFile = null;
+		XSSFCell cellSTCFile = null;
+
+		if (stcFile.exists()) { // only if all of the happy paths could be followed
+
+			cellEPUBFile = newRow.createCell(EPUBFilenameColumnNumber);
+			cellSTCFile = newRow.createCell(STCFilenameColumnNumber);
+			cellEPUBFile.setCellValue(newEPUBFileName);
+			cellSTCFile.setCellValue(stcFile.getName());
+
+			Document doc = new Document()
+					.append("EPUB_OriFilename", book.getOriFileName())
+					.append("EPUB_CleanFilename", book.getCleanFileName())
+					.append("key", book.getKey())
+					.append("oriBookname", book.getOriBookname())
+					.append("oriAuthor", book.getOriAuthor())
+					.append("bestBookname", book.getBestBookName())
+					.append("bestAuthor", book.getBestAuthor())
+					.append("finalBookname", book.getFinalBookName())
+					.append("finalAuthor", book.getFinalAuthor())
+					.append("newEPUBFilename", newEPUBFileName)
+					.append("STCFilename", stcFile.getName())
+					.append("updateTime", GlobalUtils.getCurrentTimeInString());
+
+			Document updateInst = new Document("$set", doc);
+
+			Document filter = new Document();
+			filter.put("key", book.getKey());
+			Document existingDoc = bookIndexColl.find(filter).first();
+			if (existingDoc != null) {
+				boolean result = docsEqual(existingDoc, doc);
+				if (result != true) { // significant change
+					bookIndexColl.updateOne(filter, updateInst, new UpdateOptions().upsert(true));
+				}
+			} else {
+				bookIndexColl.insertOne(doc);
 			}
 		}
-		saveSheet();
-		log4j.info("Completed process updateIndexRecords()");
+
+		log4j.info("Updated index record for key= {}", book.getKey());
 	}
 
 	public void createSTCFile(File currSourceFile, File exportFile, boolean overwrite) {
@@ -978,8 +953,8 @@ public class BookDataConsolidator {
 
 	public static void main(String[] args) {
 		System.out.println("classpath=" + System.getProperty("java.class.path"));
-		BookDataConsolidator instance = null;
-		instance = new BookDataConsolidator(args[0]);
+		BookDataConsolidator2 instance = null;
+		instance = new BookDataConsolidator2(args[0]);
 		instance.runPendings();
 		// instance.updateIndexRecords();
 		// instance.insertGoldBooks();

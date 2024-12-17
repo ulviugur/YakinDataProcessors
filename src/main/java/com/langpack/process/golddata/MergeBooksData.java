@@ -49,7 +49,7 @@ import com.mongodb.client.result.InsertManyResult;
 
 public class MergeBooksData {
 
-	public static final Logger log4j = LogManager.getLogger("BinBooksScarepeIntoMongo");
+	public static final Logger log4j = LogManager.getLogger("MergeBooksData");
 
 	XLDBInterface_1 xlInterface = null;
 
@@ -62,11 +62,11 @@ public class MergeBooksData {
 
 	// ArrayList<String> bookKeys = new ArrayList<String>();
 
-	String mongoURL = "mongodb://localhost:27017";
-	MongoCollection<Document> BinColl = null;
-	MongoCollection<Document> DNRColl = null;
+	//String mongoURL = "mongodb://localhost:27017";
+	//MongoCollection<Document> BinColl = null;
+	//MongoCollection<Document> DNRColl = null;
 
-	MongoCollection<Document> goldBooksColl = null;
+	//MongoCollection<Document> goldBooksColl = null;
 
 	MongoDatabase database = null;
 	MongoClient mongoClient = null;
@@ -78,33 +78,6 @@ public class MergeBooksData {
 	public static String[] PRINT_FIELDS = new String[] { "_id", "bookTitle", "author", "publisher" };
 	private static String MATCH_RATIO_FIELDNAME = "matchRatio";
 
-	public MergeBooksData(String cfgFileName) throws UnknownDataChannelException {
-		cfg = new ConfigReader(cfgFileName);
-
-		DataChannelFactory.initialize(cfgFileName);
-
-		sourceFileStr = cfg.getValue("BooksFile");
-		sourceFile = new File(sourceFileStr);
-
-		sourceData = DataChannelFactory.getChannelByName("XLFile");
-		xlObject = (XLChannel) sourceData;
-
-		mongoClient = MongoClients.create();
-		database = mongoClient.getDatabase("test");
-		BinColl = database.getCollection("BinBooks");
-		DNRColl = database.getCollection("DNRBooks");
-		goldBooksColl = database.getCollection("GoldBooks");
-
-		wb = xlObject.getWorkbookObject();
-
-		boolean retval = saveSheet();
-		if (!retval) {
-			log4j.info("File {} cannot be opened to process, close the file if it is open. Exitting !!");
-
-			System.exit(-1);
-		}
-
-	}
 
 	public boolean docsEqual(Document primary, Document candidate) {
 		boolean retval = true;
@@ -130,114 +103,114 @@ public class MergeBooksData {
 		}
 		return retval;
 	}
-
-	public void runSheet() {
-		int runonly = 30000; // only run a subset after skipping the amount and if not (marked as) processed
-								// yet
-		int skipRows = 1;
-		XSSFRow rowObject = null;
-		for (int i = 0; i < skipRows; i++) {
-			try {
-				rowObject = (XSSFRow) sourceData.getNextRow();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} // skip title row
-		}
-
-		try {
-			while (true) {
-				rowObject = (XSSFRow) sourceData.getNextRow();
-				if (rowObject == null) {
-					break;
-				}
-
-				Cell cellCurrFile = rowObject.getCell(0);
-				String currFile = GlobalUtils.getCellContentAsString(cellCurrFile);
-
-				Cell cellNewFile = rowObject.getCell(1);
-				String newFile = GlobalUtils.getCellContentAsString(cellNewFile);
-
-				Cell cellBookName = rowObject.getCell(2);
-				String bookName = GlobalUtils.getCellContentAsString(cellBookName);
-
-				Cell cellAuthor = rowObject.getCell(3);
-				String author = GlobalUtils.getCellContentAsString(cellAuthor);
-
-				Cell cellProcessed = rowObject.getCell(4);
-				String processed = GlobalUtils.getCellContentAsString(cellProcessed);
-
-				Cell cellFoundBook = rowObject.getCell(5);
-				String foundBook = GlobalUtils.getCellContentAsString(cellFoundBook);
-
-				if (processed == null || "".equals(processed)) {
-					foundBook = "N";
-					log4j.info("[{}] Processing {}#{} . ", runonly, bookName, author);
-				} else {
-					log4j.info("[{}] Skipping {}#{} as it was already processed .. ", runonly, bookName, author);
-					continue;
-				}
-
-				String id = BookDataConsolidator.getKey(currFile);
-
-				ArrayList<Document> goldCopy = processLine(id, bookName, author);
-
-				if (!goldCopy.isEmpty()) {
-					InsertManyResult result = null;
-
-					List<Integer> insertedIds = new ArrayList<>();
-					// Inserts sample documents and prints their "_id" values
-
-					InsertManyResult success = goldBooksColl.insertMany(goldCopy);
-
-					// success.getInsertedIds().values().forEach(doc ->
-					// insertedIds.add(doc.toString()));
-					// System.out.println("Inserted documents with the following ids: " +
-					// insertedIds);
-
-					log4j.info("Inserted {} documents for {} / {}..", goldCopy.size(), bookName, author);
-					Document example = goldCopy.get(0);
-					Double matchRatio = (Double) example.get(MATCH_RATIO_FIELDNAME);
-					if (matchRatio.equals(1.00)) {
-						// book title from sheet is already valid
-						foundBook = "Y";
-					} else {
-						// book title is potentially different
-						Cell cellUpdateTitle = rowObject.createCell(6);
-						cellUpdateTitle.setCellValue(example.getString("bookTitle"));
-
-						Cell cellUpdateAuthor = rowObject.createCell(7);
-						cellUpdateAuthor.setCellValue(example.getString("author"));
-						foundBook = "M";
-					}
-				}
-
-				cellProcessed = rowObject.createCell(4);
-				cellFoundBook = rowObject.createCell(5);
-
-				cellProcessed.setCellValue("Y");
-				cellFoundBook.setCellValue(foundBook);
-				saveSheet();
-				runonly--;
-				if (runonly == 0) {
-					break;
-				}
-			}
-
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} finally {
-			// Close the workbook
-			try {
-				wb.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		log4j.info("Process completed ..");
-	}
+//
+//	public void runSheetOld() {
+//		int runonly = 30000; // only run a subset after skipping the amount and if not (marked as) processed
+//								// yet
+//		int skipRows = 1;
+//		XSSFRow rowObject = null;
+//		for (int i = 0; i < skipRows; i++) {
+//			try {
+//				rowObject = (XSSFRow) sourceData.getNextRow();
+//			} catch (SQLException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			} // skip title row
+//		}
+//
+//		try {
+//			while (true) {
+//				rowObject = (XSSFRow) sourceData.getNextRow();
+//				if (rowObject == null) {
+//					break;
+//				}
+//
+//				Cell cellCurrFile = rowObject.getCell(0);
+//				String currFile = GlobalUtils.getCellContentAsString(cellCurrFile);
+//
+//				Cell cellNewFile = rowObject.getCell(1);
+//				String newFile = GlobalUtils.getCellContentAsString(cellNewFile);
+//
+//				Cell cellBookName = rowObject.getCell(2);
+//				String bookName = GlobalUtils.getCellContentAsString(cellBookName);
+//
+//				Cell cellAuthor = rowObject.getCell(3);
+//				String author = GlobalUtils.getCellContentAsString(cellAuthor);
+//
+//				Cell cellProcessed = rowObject.getCell(4);
+//				String processed = GlobalUtils.getCellContentAsString(cellProcessed);
+//
+//				Cell cellFoundBook = rowObject.getCell(5);
+//				String foundBook = GlobalUtils.getCellContentAsString(cellFoundBook);
+//
+//				if (processed == null || "".equals(processed)) {
+//					foundBook = "N";
+//					log4j.info("[{}] Processing {}#{} . ", runonly, bookName, author);
+//				} else {
+//					log4j.info("[{}] Skipping {}#{} as it was already processed .. ", runonly, bookName, author);
+//					continue;
+//				}
+//
+//				String id = BookDataConsolidator.getKey(currFile);
+//
+//				ArrayList<Document> goldCopy = processLine(id, bookName, author);
+//
+//				if (!goldCopy.isEmpty()) {
+//					InsertManyResult result = null;
+//
+//					List<Integer> insertedIds = new ArrayList<>();
+//					// Inserts sample documents and prints their "_id" values
+//
+//					InsertManyResult success = goldBooksColl.insertMany(goldCopy);
+//
+//					// success.getInsertedIds().values().forEach(doc ->
+//					// insertedIds.add(doc.toString()));
+//					// System.out.println("Inserted documents with the following ids: " +
+//					// insertedIds);
+//
+//					log4j.info("Inserted {} documents for {} / {}..", goldCopy.size(), bookName, author);
+//					Document example = goldCopy.get(0);
+//					Double matchRatio = (Double) example.get(MATCH_RATIO_FIELDNAME);
+//					if (matchRatio.equals(1.00)) {
+//						// book title from sheet is already valid
+//						foundBook = "Y";
+//					} else {
+//						// book title is potentially different
+//						Cell cellUpdateTitle = rowObject.createCell(6);
+//						cellUpdateTitle.setCellValue(example.getString("bookTitle"));
+//
+//						Cell cellUpdateAuthor = rowObject.createCell(7);
+//						cellUpdateAuthor.setCellValue(example.getString("author"));
+//						foundBook = "M";
+//					}
+//				}
+//
+//				cellProcessed = rowObject.createCell(4);
+//				cellFoundBook = rowObject.createCell(5);
+//
+//				cellProcessed.setCellValue("Y");
+//				cellFoundBook.setCellValue(foundBook);
+//				saveSheet();
+//				runonly--;
+//				if (runonly == 0) {
+//					break;
+//				}
+//			}
+//
+//		} catch (SQLException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} finally {
+//			// Close the workbook
+//			try {
+//				wb.close();
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//		log4j.info("Process completed ..");
+//	}
 
 	// returns exact and tolerated answers
 	public ArrayList<Document> searchInCollection(String collName, String id, String _book, String _author) {
@@ -343,20 +316,6 @@ public class MergeBooksData {
 		return retval;
 	}
 
-	public boolean saveSheet() {
-		FileOutputStream fileOut;
-		try {
-			log4j.info("Saving file {}", sourceFileStr);
-			fileOut = new FileOutputStream(sourceFileStr);
-			wb.write(fileOut);
-			fileOut.close();
-			return true;
-		} catch (IOException e) {
-			e.printStackTrace();
-			return false;
-		}
-	}
-
 	// remove all repeating records
 	public ArrayList<Document> flattenList(ArrayList<Document> tmpList) {
 		ArrayList<Document> retval = new ArrayList<Document>();
@@ -435,25 +394,6 @@ public class MergeBooksData {
 		// String newkey = bookName;
 		String localFileName = newkey + "." + ext;
 		return localFileName;
-	}
-
-	public static void main(String[] args) {
-		// System.out.println("classpath=" + System.getProperty("java.class.path"));
-
-		MergeBooksData instance;
-		try {
-			instance = new MergeBooksData(args[0]);
-			// ArrayList<Document> tmp = instance.searchInCollection("BinBooks", "Uzay
-			// 1999", "Edwin Charles Tubb");
-			log4j.info("");
-			instance.runSheet();
-
-		} catch (UnknownDataChannelException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		// instance.scrapeContent();
-
 	}
 
 }
